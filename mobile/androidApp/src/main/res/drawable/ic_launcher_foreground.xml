@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The product's mark: a report on a clipboard, as in the dashboard's header. Drawn inside the
+     66 dp safe zone of the 108 dp canvas, so no launcher mask clips it. Also used as the
+     monochrome layer for themed icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M42,38h24a4,4 0,0 1,4 4v28a4,4 0,0 1,-4 4h-24a4,4 0,0 1,-4 -4v-28a4,4 0,0 1,4 -4z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49,32h10a2,2 0,0 1,2 2v6a2,2 0,0 1,-2 2h-10a2,2 0,0 1,-2 -2v-6a2,2 0,0 1,2 -2z" />
+    <path
+        android:pathData="M46,52h16M46,60h16M46,68h9"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="4" />
+</vector>

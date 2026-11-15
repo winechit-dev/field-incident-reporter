@@ -142,4 +142,11 @@ class IncidentListViewModelTest {
         assertEquals(1, vm.state.value.counts[Status.OPEN])
         assertEquals(3, vm.state.value.total)
     }
+
+    @Test
+    fun aNewReportIsConfirmedOnTheList() = runTest {
+        val vm = setUp(FakeIncidentRepository(), this)
+        vm.onReportSaved()
+        assertEquals(ListEvent.ReportSaved, vm.events.first())
+    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -30,7 +31,7 @@ import dev.fieldreporter.core.domain.IncidentRepository
 import dev.fieldreporter.core.domain.UserRepository
 import dev.fieldreporter.feature.incidents.detail.IncidentDetailScreen
 import dev.fieldreporter.feature.incidents.detail.IncidentDetailViewModel
-import dev.fieldreporter.feature.incidents.form.IncidentFormScreen
+import dev.fieldreporter.feature.incidents.form.IncidentFormSheet
 import dev.fieldreporter.feature.incidents.form.IncidentFormViewModel
 import dev.fieldreporter.feature.incidents.list.IncidentListScreen
 import dev.fieldreporter.feature.incidents.list.IncidentListViewModel
@@ -82,14 +83,35 @@ private fun Signed(incidents: IncidentRepository, users: UserRepository, capabil
     val forward = depth >= lastDepth
     SideEffect { lastDepth = depth }
     AnimatedContent(
-        targetState = nav.current,
+        targetState = nav.base, // a form is a sheet over this screen, not a screen of its own
         transitionSpec = {
             val from: (Int) -> Int = { width -> (if (forward) width else -width) / 8 }
             (fadeIn(tween(SCREEN_FADE_MS)) + slideInHorizontally(tween(SCREEN_FADE_MS), from)) togetherWith
                 (fadeOut(tween(SCREEN_FADE_MS / 2)) + slideOutHorizontally(tween(SCREEN_FADE_MS)) { width -> -from(width) })
         },
         label = "screen",
-    ) { screen -> Destination(screen, nav, listViewModel, incidents, users, capabilities) }
+    ) { screen -> Destination(screen, nav, listViewModel, incidents, users) }
+
+    // The report and edit form slides up over whatever is showing. Keyed by visit, so each
+    // opening gets its own sheet state as well as its own view model.
+    nav.sheet?.let { form ->
+        key(form.viewModelKey) {
+            IncidentFormSheet(
+                viewModel = viewModel(key = form.viewModelKey) {
+                    IncidentFormViewModel(incidents, form.editingId, requirePhoto = capabilities.canCapturePhotos)
+                },
+                capabilities = capabilities,
+                editing = form.editingId != null,
+                onDismissed = { nav.close(form) },
+                onSaved = {
+                    // A new report closes onto the list, which confirms it. An edit closes onto
+                    // the detail screen, where the changed values are the confirmation.
+                    if (form.editingId == null) listViewModel.onReportSaved()
+                    nav.close(form)
+                },
+            )
+        }
+    }
 }
 
 private const val SCREEN_FADE_MS = 220
@@ -101,7 +123,6 @@ private fun Destination(
     listViewModel: IncidentListViewModel,
     incidents: IncidentRepository,
     users: UserRepository,
-    capabilities: PlatformCapabilities,
 ) {
     when (screen) {
         Screen.List -> IncidentListScreen(
@@ -119,13 +140,6 @@ private fun Destination(
                 nav.backToList()
             },
         )
-        is Screen.Form -> IncidentFormScreen(
-            viewModel = viewModel(key = screen.viewModelKey) {
-                IncidentFormViewModel(incidents, screen.editingId, requirePhoto = capabilities.canCapturePhotos)
-            },
-            capabilities = capabilities,
-            editing = screen.editingId != null,
-            onClose = { nav.back() },
-        )
+        is Screen.Form -> Unit // never the base screen; shown as a sheet by the caller
     }
 }

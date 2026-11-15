@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_FILTERS, PAGE_SIZE, UNASSIGNED_OPTION, activeFilterCount, hasActiveFilters, pageCount, parseFilters, toApiQuery, toSearchParams,
+  DEFAULT_FILTERS, PAGE_SIZE, UNASSIGNED_OPTION, activeFilterCount, canonicalHref, hasActiveFilters, pageRange, pageCount, parseFilters, toApiQuery, toSearchParams,
 } from "./filters";
 
 describe("parseFilters", () => {
@@ -146,5 +146,42 @@ describe("activeFilterCount", () => {
     expect(activeFilterCount({ ...DEFAULT_FILTERS, status: "OPEN", q: "lift" })).toBe(2);
     expect(activeFilterCount({ ...DEFAULT_FILTERS, from: "2026-01-01", to: "2026-01-31" })).toBe(1);
     expect(activeFilterCount({ ...DEFAULT_FILTERS, unassigned: true, severity: "HIGH", category: "SAFETY" })).toBe(3);
+  });
+});
+
+describe("pageRange", () => {
+  it("is the rows shown on a page", () => {
+    expect(pageRange(1, 45)).toEqual({ first: 1, last: 20 });
+    expect(pageRange(3, 45)).toEqual({ first: 41, last: 45 });
+  });
+
+  it("is null when there is nothing on the page: no rows at all, or a page past the last", () => {
+    expect(pageRange(1, 0)).toBeNull();
+    expect(pageRange(9, 45)).toBeNull();
+  });
+});
+
+describe("canonicalHref", () => {
+  it("is null for a URL that is already in its shortest form", () => {
+    expect(canonicalHref({})).toBeNull();
+    expect(canonicalHref({ status: "OPEN", page: "2" })).toBeNull();
+    expect(canonicalHref({ assigned: "false", sort: "updatedAt" })).toBeNull();
+  });
+
+  it("drops what a submitted form adds: empty values and defaults", () => {
+    expect(canonicalHref({ q: "", status: "OPEN", severity: "", category: "", assignee: "", from: "", to: "", sort: "createdAt", order: "desc" }))
+      .toBe("/incidents?status=OPEN");
+    expect(canonicalHref({ q: "", status: "", sort: "createdAt", order: "desc" })).toBe("/incidents");
+  });
+
+  it("rewrites the dropdown's Unassigned value and drops anything invalid or unknown", () => {
+    expect(canonicalHref({ assignee: UNASSIGNED_OPTION })).toBe("/incidents?assigned=false");
+    expect(canonicalHref({ status: "NOPE", page: "abc", extra: "1" })).toBe("/incidents");
+  });
+
+  it("settles: the canonical form of a canonical URL is itself", () => {
+    const href = canonicalHref({ severity: "HIGH", status: "OPEN", q: " lift " })!;
+    const params = Object.fromEntries(new URL(href, "http://x").searchParams);
+    expect(canonicalHref(params)).toBeNull();
   });
 });

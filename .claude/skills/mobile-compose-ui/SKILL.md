@@ -9,7 +9,7 @@ All UI is Compose Multiplatform in `:feature:incidents` `commonMain` and runs un
 
 ## Screen shape
 
-Each screen is a folder with two files: `XScreen.kt` and `XViewModel.kt`.
+Each screen is a folder with two files: `XScreen.kt` (or `XSheet.kt` for one shown as a sheet) and `XViewModel.kt`.
 
 - The view model exposes one immutable `data class` state as `StateFlow`, plus plain functions for each user intent (`onTitle`, `submit`, `requestDelete`).
 - The screen collects with `collectAsStateWithLifecycle()` and receives navigation as lambdas (`onBack`, `onOpen`). A screen never sees the back stack or a repository.
@@ -22,22 +22,27 @@ Each screen is a folder with two files: `XScreen.kt` and `XViewModel.kt`.
 
 Navigation is a hand-rolled back stack of `Screen` values in `feature/incidents`, with `BackHandler` for the system back gesture. Three screens do not justify a navigation library; propose one in the handoff once deep links or tabs appear.
 
+- The report and edit form is a `Screen.Form` on the back stack but is drawn as a `ModalBottomSheet` over `Navigator.base` (`form/IncidentFormSheet.kt`). To close it, hide the sheet first and then call `Navigator.close(form)`, so it slides away; `close` is safe to call twice.
+- A sheet that holds entered text refuses to hide in `confirmValueChange` while there is something to lose and asks instead. That one check covers back, a drag and a tap outside; do not add a `BackHandler` inside a sheet.
 - A new destination is a new `Screen` subtype, a branch in `App.kt`, and a line each in `Navigator.snapshot()` and `Navigator.restore()`. The back stack is saved with `rememberSaveable`, so a destination missing from those two is lost on rotation.
-- A screen that holds entered text asks before discarding it: the view model exposes whether there is anything to lose (`FormState.hasUnsavedChanges`) and the screen adds its own `BackHandler`.
+- A screen that holds entered text asks before discarding it: the view model exposes whether there is anything to lose (`FormState.hasUnsavedChanges`).
 - A view model that is per-visit or per-item gets a `key` in `viewModel(key = ...)`. Without one, the next visit reuses the old state.
 - Activity recreation (rotation, dark mode switch, process death) rebuilds composition. State that must survive lives in a view model or `rememberSaveable`; a plain `remember` is for derivable or throwaway values. After a navigation change, rotate the emulator on a non-root screen and confirm the screen stays.
 - Launchers for camera, gallery and permissions come from `PlatformCapabilities.remember…` and are created unconditionally at the top of the screen, as `rememberLauncherForActivityResult` requires.
+- A screen with text fields puts `Modifier.imePadding()` on its `Scaffold`; the activity is `adjustResize`, so the keyboard shrinks the screen instead of panning it.
+- A refused submit raises a counter in state (`FormState.rejectedSubmits`) and names the first problem (`firstProblem`); the screen scrolls it into view. An error the Technician cannot see is the same as no error.
 - `MainActivity` calls `enableEdgeToEdge()`. Content goes inside `Scaffold` and applies its `padding`; lists add bottom `contentPadding` so the FAB never covers the last row.
 
 ## Design system
 
 There is one theme: `FieldReporterTheme` in `ui/Theme.kt`, applied in `App.kt`. It follows the system's light or dark setting.
 
+- Set every colour role in both schemes. One left out falls back to Material's purple baseline.
 - Colour, type and shape come from `MaterialTheme.colorScheme`, `.typography` and `.shapes`. Literal colours live in two places only: the two schemes in `ui/Theme.kt`, and the Status and Severity tones in `ui/Labels.kt`, each with a light and a dark pair and a `label()` beside it.
 - The values are shared with the dashboard. `docs/design/design-system.md` lists them; a value changed here is changed in `admin/src/app/globals.css` or `status-badges.tsx` in the same task.
 - Spacing uses the existing steps: 4, 8, 12, 16 dp, and 32 dp for empty states. Wrap a screen's content in `ContentWidth` so it stays readable on a tablet and in landscape.
 - Reuse the pieces in `ui/Components.kt`: `StatusPill` (a tinted pill with a dot) and `SeverityLevel` (four bars and the word), or `IncidentPills` for the set; `AppCard` for a card; `InfoRow` for an icon, a label and a value; `Avatar` for a person; `EmptyState` for nothing-here and could-not-load; `Notice` and `FailureBanner` for a refusal; `SectionLabel` for a group heading; `ChoiceChips` for a single choice.
-- Type weights and corner radii come from `AppTypography` and `AppShapes` in `ui/Theme.kt`. Use the theme's styles and shapes; do not set a weight or a radius at the call site.
+- Typefaces, weights and corner radii come from `appTypography()` and `AppShapes` in `ui/Theme.kt`. Display, headline and `titleLarge` use the bundled display face; smaller titles, body and labels use the platform's. Use the theme's styles and shapes; do not set a font family, a weight or a radius at the call site.
 - A screen has one filled `Button`: its main action. When the content scrolls, the main action goes in the `Scaffold`'s `bottomBar` with `navigationBarsPadding()`, so it is always reachable.
 - Icons come from `material-icons-core` (`Icons.Filled`, `Icons.AutoMirrored.Filled`). The extended set is not a dependency; a glyph it lacks is drawn in `ui/Icons.kt` (`AppIcons`) from Material's path data.
 - Times are shown with `Instant.display()`: the viewer's zone, in the dashboard's format.

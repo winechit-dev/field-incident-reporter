@@ -59,6 +59,8 @@ import dev.fieldreporter.feature.incidents.ui.IncidentPills
 import dev.fieldreporter.feature.incidents.ui.InfoRow
 import dev.fieldreporter.feature.incidents.ui.LocalDarkTheme
 import dev.fieldreporter.feature.incidents.ui.PhotoStrip
+import dev.fieldreporter.feature.incidents.ui.PhotoViewer
+import dev.fieldreporter.feature.incidents.ui.SinglePhoto
 import dev.fieldreporter.feature.incidents.ui.SectionLabel
 import dev.fieldreporter.feature.incidents.ui.display
 import dev.fieldreporter.feature.incidents.ui.imageModel
@@ -157,8 +159,14 @@ private fun Content(incident: Incident, assigneeName: String?, onDismissFailure:
             // Photos first and large: they are what a Technician recognises an Incident by. The
             // strip scrolls edge to edge, so its padding is inside it rather than around it.
             val photos = incident.photos.mapNotNull { p -> p.imageModel()?.let { p.id to it } }
-            if (photos.isNotEmpty()) {
-                PhotoStrip(photos, width = 280.dp, height = 200.dp, contentPadding = PaddingValues(horizontal = 16.dp))
+            var viewing by rememberSaveable { mutableStateOf(NOT_VIEWING) }
+            when (photos.size) {
+                0 -> Unit
+                1 -> SinglePhoto(photos[0].second, onOpen = { viewing = 0 }, modifier = side)
+                else -> PhotoStrip(photos, width = 280.dp, height = 200.dp, contentPadding = PaddingValues(horizontal = 16.dp), onOpen = { viewing = it })
+            }
+            if (viewing != NOT_VIEWING && photos.isNotEmpty()) {
+                PhotoViewer(photos.map { it.second }, start = viewing, onClose = { viewing = NOT_VIEWING })
             }
 
             Column(side, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -218,6 +226,8 @@ private fun Content(incident: Incident, assigneeName: String?, onDismissFailure:
         }
     }
 }
+
+private const val NOT_VIEWING = -1
 
 /** The Handling line: the Operator's name when known, today's wording otherwise (also for a blank name). */
 internal fun handlingText(assigneeName: String?): String =

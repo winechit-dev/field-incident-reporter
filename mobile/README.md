@@ -29,13 +29,17 @@ network.
 
 ## Screens and design
 
-Four screens: the user picker, the Incident list, the detail and the report or edit form. They share one theme (`ui/Theme.kt`) that follows the system's light or dark setting, and a small set of components (`ui/Components.kt`). The colours, the Status and Severity tones and the date format are the dashboard's; see `docs/design/design-system.md` at the repo root.
+Three screens (the user picker, the Incident list and the detail) and the report or edit form, which is a full-height sheet that slides up over the list or the detail (`form/IncidentFormSheet.kt`). They share one theme (`ui/Theme.kt`) that follows the system's light or dark setting, and a small set of components (`ui/Components.kt`). The colours, the Status and Severity tones and the date format are the dashboard's; see `docs/design/design-system.md` at the repo root.
 
 The list has a chip per Status with its count; tapping one narrows the list. The avatar in its top bar opens a sheet with who is signed in and the way to switch.
 
-The back stack is saved, so rotating the phone or returning after the system reclaimed the app shows the same screen, with a half-written report still in its form. Closing a form with something entered asks first. Times are shown in the phone's zone.
+A photo opens full screen on a tap. A submit that is refused scrolls to the first problem, and a saved report is confirmed on the list. The keyboard resizes the screen (`adjustResize` with `imePadding`).
+
+The back stack is saved, so rotating the phone or returning after the system reclaimed the app shows the same screen, with a half-written report still in its form. Closing the form with something entered asks first, whether by the close button, the back gesture or a drag down. Times are shown in the phone's zone.
 
 `:feature:incidents` depends on `material-icons-core` for icons and `kotlinx-datetime` for local time.
+
+Titles use a bundled display typeface, Plus Jakarta Sans (Bold and ExtraBold, in `feature/incidents/src/commonMain/composeResources/font/`; SIL Open Font License, `licenses/PlusJakartaSans-OFL.txt`). Body text, labels and fields use the platform's typeface. The whole scale is `appTypography()` in `ui/Theme.kt`.
 
 ## Run and test
 

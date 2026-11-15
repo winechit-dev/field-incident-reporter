@@ -30,7 +30,7 @@ export function Overview({ tiles, counts }: { tiles: OverviewTile[]; counts: num
                 {tile.label}
                 {tile.active && <span className="sr-only"> (showing now, select to clear)</span>}
               </span>
-              <span className="text-3xl font-semibold tracking-tight">{counts[index].toLocaleString("en")}</span>
+              <span className="type-display">{counts[index].toLocaleString("en")}</span>
             </Link>
           </li>
         ))}

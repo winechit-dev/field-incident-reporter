@@ -11,7 +11,7 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
 
   return (
     <main id="main" role="alert" className="flex flex-col items-start gap-3 pt-8">
-      <h1 className="text-2xl font-semibold">Something went wrong</h1>
+      <h1 className="type-headline">Something went wrong</h1>
       <p className="text-sm text-muted-foreground">The page could not be shown. Nothing was changed.</p>
       <Button onClick={() => retry()}>Try again</Button>
     </main>

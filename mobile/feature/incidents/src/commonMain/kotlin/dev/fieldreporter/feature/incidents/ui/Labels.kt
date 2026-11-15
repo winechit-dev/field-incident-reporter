@@ -1,6 +1,10 @@
 package dev.fieldreporter.feature.incidents.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import dev.fieldreporter.core.domain.Category
 import dev.fieldreporter.core.domain.Incident
 import dev.fieldreporter.core.domain.Photo
@@ -17,6 +21,14 @@ fun Category.label() = when (this) {
     Category.ROAD_HAZARD -> "Road hazard"
     Category.SAFETY -> "Safety"
     Category.OTHER -> "Other"
+}
+
+/** The picture that stands for a Category where there is room for one, as on the report form. */
+fun Category.icon(): ImageVector = when (this) {
+    Category.EQUIPMENT -> Icons.Filled.Build
+    Category.ROAD_HAZARD -> Icons.Filled.Warning
+    Category.SAFETY -> AppIcons.Shield
+    Category.OTHER -> AppIcons.More
 }
 
 fun Severity.label() = when (this) {

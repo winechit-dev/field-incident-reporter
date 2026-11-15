@@ -114,4 +114,26 @@ class NavigatorTest {
         val restored = Navigator.restore(listOf("3", "detail:i1", "something-else"))
         assertEquals(listOf<Screen>(Screen.List), restored.stack.toList())
     }
+
+    @Test
+    fun aFormIsASheetOverTheScreenItWasOpenedFrom() {
+        // The form slides up over the list (a new report) or the detail (an edit); that screen
+        // stays where it is underneath, and is what shows again when the sheet goes.
+        val nav = Navigator()
+        assertEquals(Screen.List, nav.base)
+        assertEquals(null, nav.sheet)
+
+        nav.openForm()
+        assertEquals(Screen.List, nav.base)
+        assertIs<Screen.Form>(nav.sheet)
+        nav.back()
+
+        nav.openDetail("i1")
+        assertEquals(Screen.Detail("i1"), nav.base)
+        nav.openForm(editingId = "i1")
+        assertEquals(Screen.Detail("i1"), nav.base, "the detail stays under the edit sheet")
+        assertEquals("i1", nav.sheet?.editingId)
+        nav.back()
+        assertEquals(null, nav.sheet)
+    }
 }

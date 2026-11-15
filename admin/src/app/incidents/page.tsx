@@ -12,7 +12,7 @@ import { Pagination } from "@/components/pagination";
 import { IncidentsSkeleton } from "@/components/skeletons";
 import { ApiUnavailable, EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
-import { hasActiveFilters, parseFilters, type Filters } from "@/lib/filters";
+import { canonicalHref, hasActiveFilters, parseFilters, type Filters } from "@/lib/filters";
 import { overviewTiles, toCountQuery } from "@/lib/overview";
 import { getOperator } from "@/lib/session";
 
@@ -24,7 +24,7 @@ export default function IncidentsPage({ searchParams }: { searchParams: SearchPa
   return (
     <main id="main" className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Incidents</h1>
+        <h1 className="type-headline">Incidents</h1>
         <p className="text-sm text-muted-foreground">Reports from Technicians in the field. Open one to triage it.</p>
       </div>
       {/* Filters, the cookie and the API are all per-request, so the page streams in behind a boundary. */}
@@ -54,7 +54,10 @@ async function load(operatorId: string, filters: Filters) {
 
 async function IncidentsContent({ searchParams }: { searchParams: SearchParams }) {
   await connection(); // always live data, never prerendered
-  const filters = parseFilters(await searchParams);
+  const raw = await searchParams;
+  const canonical = canonicalHref(raw);
+  if (canonical) redirect(canonical); // a submitted form's empty and default fields are dropped from the URL
+  const filters = parseFilters(raw);
   const operator = await getOperator();
   if (!operator) redirect("/sign-in");
 

@@ -37,6 +37,8 @@ sealed interface ListEvent {
     /** Offer an Undo for a delete that is waiting out its grace period. */
     data class DeleteUndoOffered(val title: String) : ListEvent
     data class Message(val text: String) : ListEvent
+    /** A new report was saved. The list shows it at the top and says so. */
+    data object ReportSaved : ListEvent
 }
 
 /**
@@ -118,6 +120,11 @@ class IncidentListViewModel(
         pendingDeletes.remove(id)?.cancel()
         hidden.value -= id
         lastDeleted = null
+    }
+
+    /** A new report was saved. The form has closed, so the list is where the confirmation shows. */
+    fun onReportSaved() {
+        _events.trySend(ListEvent.ReportSaved)
     }
 
     fun switchUser() {

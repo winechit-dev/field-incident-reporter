@@ -9,11 +9,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
+import dev.fieldreporter.feature.incidents.resources.Res
+import dev.fieldreporter.feature.incidents.resources.plus_jakarta_sans_bold
+import dev.fieldreporter.feature.incidents.resources.plus_jakarta_sans_extrabold
+import org.jetbrains.compose.resources.Font
 
 /*
  * The product's colours. The brand blue and the neutrals are the same values the dashboard uses
@@ -47,6 +54,17 @@ private val LightColors = lightColorScheme(
     onError = Color(0xFFFFFFFF),
     errorContainer = Color(0xFFFDE4E1),
     onErrorContainer = Color(0xFF7A1212),
+    // Every role is set. One left out falls back to Material's purple baseline, which is how a
+    // purple "Undo" ended up on the snackbar.
+    tertiaryContainer = Color(0xFFEAF0FD),
+    onTertiaryContainer = Color(0xFF1C3F9A),
+    inverseSurface = Color(0xFF2A2F38),
+    inverseOnSurface = Color(0xFFECEEF2),
+    inversePrimary = Color(0xFFA9C2FF),
+    surfaceTint = Color(0xFF2A56C6),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceDim = Color(0xFFE1E5EA),
+    scrim = Color(0xFF000000),
 )
 
 private val DarkColors = darkColorScheme(
@@ -77,21 +95,59 @@ private val DarkColors = darkColorScheme(
     onError = Color(0xFF5F0F0F),
     errorContainer = Color(0xFF5C1A1A),
     onErrorContainer = Color(0xFFFFDAD6),
+    tertiaryContainer = Color(0xFF1C2740),
+    onTertiaryContainer = Color(0xFFC9D8FF),
+    inverseSurface = Color(0xFFECEEF2),
+    inverseOnSurface = Color(0xFF12161D),
+    inversePrimary = Color(0xFF2A56C6),
+    surfaceTint = Color(0xFFA9C2FF),
+    surfaceBright = Color(0xFF222833),
+    surfaceDim = Color(0xFF0A0C10),
+    scrim = Color(0xFF000000),
 )
 
 /*
- * Material 3's scale on the platform typeface, with heavier titles and slightly tighter
- * headlines, so a screen's hierarchy reads from weight as well as size.
+ * The display face: Plus Jakarta Sans, bundled in composeResources/font (SIL Open Font License,
+ * mobile/licenses). Only the two weights the scale uses are shipped. A glyph it lacks, such as
+ * Burmese or Thai in an Incident's title, falls back to the platform typeface.
  */
-private val Base = Typography()
-private val AppTypography = Base.copy(
-    headlineMedium = Base.headlineMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
-    headlineSmall = Base.headlineSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp),
-    titleLarge = Base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-    titleMedium = Base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-    titleSmall = Base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-    labelLarge = Base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+@Composable
+private fun displayFontFamily() = FontFamily(
+    Font(Res.font.plus_jakarta_sans_bold, FontWeight.Bold),
+    Font(Res.font.plus_jakarta_sans_extrabold, FontWeight.ExtraBold),
 )
+
+/*
+ * The type scale, the one place a typeface, weight or tracking is set.
+ *
+ * Display, headline and `titleLarge` are the prominent text: screen and sheet titles, an
+ * Incident's title, empty-state headings, headline numbers. They take the display face: extra
+ * bold and slightly tightened for display and headline, bold for `titleLarge`. Everything a person reads at length or types into
+ * (the smaller titles, body, labels, fields) stays on the platform typeface at Material 3's
+ * sizes, so it reads as native and scales with the system font size. All sizes are in sp.
+ */
+@Composable
+private fun appTypography(): Typography {
+    val display = displayFontFamily()
+    return remember(display) {
+        val base = Typography()
+        fun TextStyle.display(weight: FontWeight, tracking: Double) =
+            copy(fontFamily = display, fontWeight = weight, letterSpacing = tracking.em)
+        base.copy(
+            displayLarge = base.displayLarge.display(FontWeight.ExtraBold, -0.025),
+            displayMedium = base.displayMedium.display(FontWeight.ExtraBold, -0.025),
+            displaySmall = base.displaySmall.display(FontWeight.ExtraBold, -0.02),
+            headlineLarge = base.headlineLarge.display(FontWeight.ExtraBold, -0.015),
+            headlineMedium = base.headlineMedium.display(FontWeight.ExtraBold, -0.01),
+            headlineSmall = base.headlineSmall.display(FontWeight.ExtraBold, -0.01),
+            titleLarge = base.titleLarge.display(FontWeight.Bold, 0.0),
+            titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            // bodyLarge/Medium/Small and labelMedium/Small are Material 3's, unchanged.
+        )
+    }
+}
 
 /** Rounder than Material's defaults: 12 dp for fields and thumbnails, 20 dp for cards, 28 dp for sheets. */
 private val AppShapes = Shapes(
@@ -109,6 +165,6 @@ val LocalDarkTheme = staticCompositionLocalOf { false }
 @Composable
 fun FieldReporterTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDarkTheme provides dark) {
-        MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = AppTypography, shapes = AppShapes, content = content)
+        MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = appTypography(), shapes = AppShapes, content = content)
     }
 }

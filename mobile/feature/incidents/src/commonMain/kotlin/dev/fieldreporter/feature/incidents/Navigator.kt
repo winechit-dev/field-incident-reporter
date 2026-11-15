@@ -24,6 +24,13 @@ internal class Navigator {
     private var visits = 0
 
     val current: Screen get() = stack.last()
+
+    /** The form on top of the stack, if there is one. It is shown as a sheet over [base]. */
+    val sheet: Screen.Form? get() = stack.last() as? Screen.Form
+
+    /** The full screen that is showing: the top of the stack, or what a form sheet covers. */
+    val base: Screen get() = stack.last { it !is Screen.Form }
+
     val canGoBack: Boolean get() = stack.size > 1
 
     fun openDetail(id: String) {
@@ -33,6 +40,11 @@ internal class Navigator {
     /** @param editingId the Incident to edit, or null to report a new one. */
     fun openForm(editingId: String? = null) {
         stack.add(Screen.Form(editingId, visits++))
+    }
+
+    /** Closes [form] if it is still on top. Safe to call twice, as a sheet's dismissal can. */
+    fun close(form: Screen.Form) {
+        if (stack.last() == form) stack.removeAt(stack.lastIndex)
     }
 
     fun back() {

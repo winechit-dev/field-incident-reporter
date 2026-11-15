@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PAGE_SIZE, pageCount, toSearchParams, type Filters } from "@/lib/filters";
+import { pageCount, pageRange, toSearchParams, type Filters } from "@/lib/filters";
 
 function hrefFor(filters: Filters, page: number) {
   const query = toSearchParams({ ...filters, page }).toString();
@@ -12,9 +12,13 @@ function hrefFor(filters: Filters, page: number) {
 export function Pagination({ filters, total }: { filters: Filters; total: number }) {
   if (total === 0) return null;
   const pages = pageCount(total);
-  const page = Math.min(filters.page, pages);
-  const first = (page - 1) * PAGE_SIZE + 1;
-  const last = Math.min(page * PAGE_SIZE, total);
+  const page = filters.page;
+  const range = pageRange(page, total);
+  // Past the last page there are no rows to give a range for; the empty state offers the way back.
+  if (!range) {
+    return <p className="text-sm text-muted-foreground">{total} {total === 1 ? "incident" : "incidents"} in {pages} {pages === 1 ? "page" : "pages"}</p>;
+  }
+  const { first, last } = range;
 
   return (
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">

@@ -7,8 +7,8 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
 /**
- * The two icons the app needs that `material-icons-core` does not carry. Drawn here from
- * Material's own path data rather than pulling in the extended icon set for two glyphs.
+ * The icons the app needs that `material-icons-core` does not carry. Drawn here from
+ * Material's own path data rather than pulling in the extended icon set for a few glyphs.
  */
 object AppIcons {
     val Camera: ImageVector by lazy {
@@ -25,6 +25,19 @@ object AppIcons {
             "Image",
             "M21,19V5c0,-1.1 -0.9,-2 -2,-2H5c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2z" +
                 "M8.5,13.5l2.5,3.01L14.5,12l4.5,6H5l3.5,-4.5z",
+        )
+    }
+
+    val Shield: ImageVector by lazy {
+        icon("Shield", "M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4z")
+    }
+
+    val More: ImageVector by lazy {
+        icon(
+            "More",
+            "M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+                "M18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z" +
+                "M12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z",
         )
     }
 

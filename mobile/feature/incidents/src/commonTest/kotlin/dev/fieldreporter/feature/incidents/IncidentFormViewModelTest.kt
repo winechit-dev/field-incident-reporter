@@ -2,6 +2,7 @@ package dev.fieldreporter.feature.incidents
 
 import dev.fieldreporter.core.domain.Category
 import dev.fieldreporter.core.domain.Status
+import dev.fieldreporter.feature.incidents.form.FormField
 import dev.fieldreporter.feature.incidents.form.IncidentFormViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -139,5 +140,60 @@ class IncidentFormViewModelTest {
         advanceUntilIdle()
         assertTrue(vm.state.value.done)
         assertFalse(vm.state.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun aRejectedSubmitSaysWhichProblemComesFirstSoTheScreenCanShowIt() = runTest {
+        val vm = vm(FakeIncidentRepository(), requirePhoto = true)
+        assertNull(vm.state.value.firstProblem)
+
+        vm.submit()
+        assertEquals(FormField.TITLE, vm.state.value.firstProblem, "the title comes before the photos")
+        val first = vm.state.value.rejectedSubmits
+
+        vm.onTitle("Leak")
+        vm.submit()
+        assertEquals(FormField.PHOTOS, vm.state.value.firstProblem)
+        assertEquals(first + 1, vm.state.value.rejectedSubmits, "each rejected submit is a new signal, even for the same problem")
+
+        vm.onPhotoAdded("/cache/a.jpg")
+        assertNull(vm.state.value.firstProblem, "fixing the problem clears it")
+    }
+
+    @Test
+    fun theFormSaysUpFrontWhetherAPhotoIsRequired() = runTest {
+        assertTrue(vm(FakeIncidentRepository(), requirePhoto = true).state.value.photoRequired)
+        assertFalse(vm(FakeIncidentRepository(), requirePhoto = false).state.value.photoRequired)
+        val repo = FakeIncidentRepository(listOf(anIncident("i1")))
+        val editing = vm(repo, editingId = "i1", requirePhoto = true)
+        advanceUntilIdle()
+        assertFalse(editing.state.value.photoRequired, "an edit never asks for a photo")
+    }
+
+    @Test
+    fun askingForTheLocationShowsItIsBeingFoundUntilAnAnswerComes() = runTest {
+        val vm = vm(FakeIncidentRepository())
+        assertFalse(vm.state.value.locating)
+
+        vm.onLocationRequested()
+        assertTrue(vm.state.value.locating)
+        assertFalse(vm.state.value.hasUnsavedChanges, "asking is not yet something to lose")
+
+        vm.onLocationFound(dev.fieldreporter.core.domain.Location(latitude = 16.8, longitude = 96.1))
+        assertFalse(vm.state.value.locating)
+
+        vm.onLocationRequested()
+        vm.onLocationFound(null)
+        assertFalse(vm.state.value.locating, "a failed lookup also ends the wait")
+        assertNotNull(vm.state.value.locationError)
+    }
+
+    @Test
+    fun askingAgainClearsTheEarlierLocationError() = runTest {
+        val vm = vm(FakeIncidentRepository())
+        vm.onLocationFound(null)
+        assertNotNull(vm.state.value.locationError)
+        vm.onLocationRequested()
+        assertNull(vm.state.value.locationError)
     }
 }

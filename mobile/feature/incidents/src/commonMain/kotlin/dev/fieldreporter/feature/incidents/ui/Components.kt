@@ -80,16 +80,21 @@ fun StatusPill(status: Status, modifier: Modifier = Modifier) =
  */
 @Composable
 fun SeverityLevel(severity: Severity, modifier: Modifier = Modifier) {
-    val tone = severity.tone(LocalDarkTheme.current)
-    val idle = MaterialTheme.colorScheme.outlineVariant
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        // The bars repeat what the word says, so a screen reader skips them.
-        Row(Modifier.height(12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
-            for (bar in 1..4) {
-                Box(Modifier.width(3.dp).height((3 * bar).dp).background(if (bar <= severity.level()) tone.content else idle, RoundedCornerShape(1.dp)))
-            }
-        }
+        SeverityBars(severity)
         Text(severity.label(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+    }
+}
+
+/** One to four filled bars out of four. They repeat a word shown beside them, so a screen reader skips them. */
+@Composable
+fun SeverityBars(severity: Severity, modifier: Modifier = Modifier) {
+    val filled = severity.tone(LocalDarkTheme.current).content
+    val idle = MaterialTheme.colorScheme.outlineVariant
+    Row(modifier.height(12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+        for (bar in 1..4) {
+            Box(Modifier.width(3.dp).height((3 * bar).dp).background(if (bar <= severity.level()) filled else idle, RoundedCornerShape(1.dp)))
+        }
     }
 }
 

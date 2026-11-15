@@ -128,3 +128,24 @@ export function activeFilterCount(f: Filters): number {
 export function pageCount(total: number): number {
   return Math.max(1, Math.ceil(total / PAGE_SIZE));
 }
+
+/** The rows shown on a page, or null when the page holds none: no rows at all, or a page past the last. */
+export function pageRange(page: number, total: number): { first: number; last: number } | null {
+  if (total === 0 || page > pageCount(total)) return null;
+  return { first: (page - 1) * PAGE_SIZE + 1, last: Math.min(page * PAGE_SIZE, total) };
+}
+
+/**
+ * Where to send a request whose query is not in its shortest form, or null when it already is.
+ * A submitted filter form adds every field, empty or default (`?q=&status=OPEN&severity=&…`);
+ * redirecting to the canonical form keeps the address bar, and so shared links, short.
+ */
+export function canonicalHref(params: RawParams): string | null {
+  const given = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    for (const item of Array.isArray(value) ? value : [value]) if (item !== undefined) given.append(key, item);
+  }
+  const canonical = toSearchParams(parseFilters(params)).toString();
+  if (given.toString() === canonical) return null;
+  return canonical ? `/incidents?${canonical}` : "/incidents";
+}

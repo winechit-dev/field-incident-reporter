@@ -24,7 +24,7 @@ Tailwind 4 and shadcn/ui primitives in `src/components/ui/`. One look across the
 - Dark mode follows the system (`prefers-color-scheme`); there is no `.dark` class and no switch. `dark:` utilities work as usual.
 - Spacing follows the existing rhythm: `gap-2` inside a control group, `gap-3` between controls, `gap-4` inside a form or card, `gap-5` between page sections, `px-4 sm:px-6 py-6` page padding, content capped at `max-w-7xl`.
 - A view has one filled (`default`) button: its main action. The rest are `outline`, `secondary` or `ghost`.
-- Type: `text-2xl font-semibold` for the page title, `text-sm` for body and tables, `text-xs font-medium text-muted-foreground` for field labels.
+- Type: `type-headline` for the page title, `type-title` for a card or empty-state title, `type-display` for a headline number; these three utilities in `globals.css` are the only place the display face is used. `text-sm` for body and tables, `text-xs font-medium text-muted-foreground` for field labels. Do not put `font-heading`, a display weight or tracking on an element directly.
 
 ## States
 

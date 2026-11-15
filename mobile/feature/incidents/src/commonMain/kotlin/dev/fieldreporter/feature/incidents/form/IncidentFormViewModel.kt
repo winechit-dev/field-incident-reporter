@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** The parts of the form that can be wrong, in the order they appear on screen. */
+enum class FormField { TITLE, DESCRIPTION, PHOTOS }
+
 /** A photo shown in the form: a server URL, or a local file that has not been uploaded yet. */
 data class FormPhoto(val id: String, val model: String)
 
@@ -34,6 +37,8 @@ data class FormState(
     val descriptionError: String? = null,
     val photoError: String? = null,
     val locationError: String? = null,
+    /** True from asking the device for its location until it answers, found or not. */
+    val locating: Boolean = false,
     val saving: Boolean = false,
     /** Set when the Incident cannot be edited any more (an Operator picked it up). */
     val blockedMessage: String? = null,
@@ -41,7 +46,19 @@ data class FormState(
     val done: Boolean = false,
     /** Whether closing now would lose something the Technician entered. The screen asks first. */
     val hasUnsavedChanges: Boolean = false,
+    /** Whether a report needs at least one photo. Said on the form, not only after a failed submit. */
+    val photoRequired: Boolean = false,
+    /** Goes up each time a submit is refused, so the screen can bring [firstProblem] into view. */
+    val rejectedSubmits: Int = 0,
 ) {
+    /** The topmost part of the form with an error, or null when there is none. */
+    val firstProblem: FormField? get() = when {
+        titleError != null -> FormField.TITLE
+        descriptionError != null -> FormField.DESCRIPTION
+        photoError != null -> FormField.PHOTOS
+        else -> null
+    }
+
     val canAddPhoto: Boolean get() = photos.size < MAX_PHOTOS
 }
 
@@ -56,7 +73,7 @@ class IncidentFormViewModel(
     /** Reporting needs at least one photo, but only on devices that can capture one. */
     private val requirePhoto: Boolean,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(FormState(loaded = editingId == null))
+    private val _state = MutableStateFlow(FormState(loaded = editingId == null, photoRequired = editingId == null && requirePhoto))
     val state: StateFlow<FormState> = _state.asStateFlow()
     private var original: Incident? = null
     private var counter = 0
@@ -113,14 +130,17 @@ class IncidentFormViewModel(
     fun onAddress(value: String) =
         change { it.copy(location = it.location.copy(address = value.ifBlank { null })) }
 
+    /** The Technician asked for the device's location; [onLocationFound] ends the wait. */
+    fun onLocationRequested() = change { it.copy(locating = true, locationError = null) }
+
     /** @param found null when the lookup failed, which leaves the location as it was. */
     fun onLocationFound(found: Location?) {
         if (found == null) {
-            change { it.copy(locationError = "Couldn't find your location. Type an address instead.") }
+            change { it.copy(locating = false, locationError = "Couldn't find your location. Type an address instead.") }
             return
         }
         change {
-            it.copy(location = found.copy(address = found.address ?: it.location.address), locationError = null)
+            it.copy(location = found.copy(address = found.address ?: it.location.address), locationError = null, locating = false)
         }
     }
 
@@ -162,7 +182,7 @@ class IncidentFormViewModel(
         val descriptionError = if (s.description.length > 2000) "At most 2000 characters" else null
         val photoError = if (editingId == null && requirePhoto && s.photos.isEmpty()) "Add at least one photo" else null
         if (titleError != null || descriptionError != null || photoError != null) {
-            change { it.copy(titleError = titleError, descriptionError = descriptionError, photoError = photoError) }
+            change { it.copy(titleError = titleError, descriptionError = descriptionError, photoError = photoError, rejectedSubmits = it.rejectedSubmits + 1) }
             return
         }
         change { it.copy(saving = true) }

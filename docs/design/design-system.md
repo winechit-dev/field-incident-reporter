@@ -11,6 +11,8 @@ Where the values live:
 
 A value changed on one platform is changed on the other in the same task.
 
+The product's mark is a report on a clipboard, white on the brand blue: the dashboard's header, the phone's sign-in screen and the Android launcher icon (`androidApp/src/main/res/drawable/ic_launcher_*.xml`).
+
 ## Colour
 
 Both themes follow the system's light or dark setting. Neither app has its own switch.
@@ -24,6 +26,7 @@ Both themes follow the system's light or dark setting. Neither app has its own s
 | Text | `#12161D` | `#ECEEF2` | `--foreground` | `onSurface` |
 | Secondary text | `#586172` | `#A0A9B8` | `--muted-foreground` | `onSurfaceVariant` |
 | Hairline border | `#E1E5EA` | white 12% | `--border` | `outlineVariant` |
+| Control edge | `#848E9F` | `#6B7484` | `--input` | `outline` (`#7A8496` / `#7C8696`) |
 | Error | `#C62828` | `#FF8A80` | `--destructive` | `error` |
 | Success | `#166534` | `#86EFAC` | `--success` | not used |
 
@@ -43,16 +46,25 @@ On the web these are Tailwind's `*-100` with `*-800/900` and `*-950` with `*-300
 
 ## Type
 
-| Use | Admin | Mobile |
-| --- | --- | --- |
-| Typeface | Geist | the platform's default (Roboto, San Francisco) |
-| Weight | semibold titles with `tracking-tight` | semibold headlines, titles and `labelLarge`; headlines slightly tightened (`ui/Theme.kt`) |
-| Page or screen title | `text-2xl font-semibold tracking-tight` | `headlineSmall` in the list's top bar and for an Incident's title; `titleLarge` in other top bars |
-| Headline number | `text-3xl font-semibold tracking-tight` (overview tiles) | not used |
-| Card or section title | `text-base font-medium` | `titleMedium`; `titleSmall` for a section label |
-| Body | `text-sm` | `bodyLarge` for content, `bodyMedium` for supporting text |
-| Field label | `text-xs font-medium text-muted-foreground` | the field's own floating label |
-| Badge | `text-xs font-medium` | `labelMedium` |
+Two faces. **Plus Jakarta Sans** is the display face on both platforms, used only for prominent text: page and screen titles, sheet titles, an Incident's title, card titles on the web, empty-state headings and headline numbers. Everything read at length or typed into (body, tables, labels, fields, buttons, badges) stays on the reading face: Geist on the web, the platform's default (Roboto, San Francisco) on the phone.
+
+Plus Jakarta Sans is under the SIL Open Font License 1.1. The phone bundles two weights, Bold and ExtraBold, in `mobile/feature/incidents/src/commonMain/composeResources/font/`, with the licence in `mobile/licenses/`. The web loads the same two through `next/font`, which self-hosts them at build time. A glyph the face lacks (Burmese, Thai, CJK in an Incident's title) falls back to the reading face.
+
+The scale is defined once per platform: `appTypography()` in `ui/Theme.kt`, and the `type-*` utilities with `--font-heading` in `admin/src/app/globals.css`. Do not set a face, weight or tracking at a call site.
+
+| Role | Face, weight, tracking | Mobile (sp, size/line) | Admin | Used for |
+| --- | --- | --- | --- | --- |
+| Display L / M / S | display, ExtraBold, −0.025 to −0.02 em | 57/64, 45/52, 36/44 | `type-display` (32/40 px, tabular figures) | headline numbers (overview tiles); none on the phone yet |
+| Headline L / M | display, ExtraBold, −0.015 to −0.01 em | 32/40, 28/36 | not used | "Who are you?" on the phone (`headlineMedium`) |
+| Headline S | display, ExtraBold, −0.01 em | 24/32 | `type-headline` (24/32 px) | page titles; the list's top bar; an Incident's title |
+| Title L | display, Bold | 22/28 | not used | other top bars, sheet titles, empty-state headings, the account name |
+| Title M | mobile: reading, SemiBold. Admin: display, Bold | 16/24 | `type-title` (16/22 px) | a card's title; an Incident's title in a list; web empty-state headings and the product name |
+| Title S | reading, SemiBold | 14/20 | `text-sm font-medium` | a section label |
+| Body L / M / S | reading, Regular | 16/24, 14/20, 12/16 | `text-base` (fields on small screens), `text-sm`, `text-xs` | content, supporting text, hints |
+| Label L | reading, SemiBold | 14/20 | `text-sm font-medium` | buttons |
+| Label M / S | reading, Medium | 12/16, 11/16 | `text-xs font-medium` | badges, field labels (`text-muted-foreground`), counters |
+
+Phone sizes are in sp and web sizes in rem, so both follow the person's font-size setting.
 
 ## Spacing and shape
 
@@ -92,7 +104,15 @@ No gradients and no decorative shadows on either platform. Depth comes from the 
 - **Counts double as filters.** The dashboard's tiles and the phone's chips each show how many Incidents are in a Status and narrow the list to it in one tap. The counts cover everything, whatever the list is filtered to.
 - **One main action per view.** It is the only filled button. On the dashboard's triage panel it is the usual next step for the Status (`primaryAction`); on the phone it sits in a bottom bar so it is reachable without scrolling.
 - **Destructive actions** are outlined in the error colour, never filled, and ask first (Delete) or offer Undo afterwards.
+- **The report and edit form is a full-height sheet** on the phone. It slides up over the screen it was opened from and stops under the status bar; a header (close, title), the scrolling fields, and a footer with the submit button. It closes by the close button, the back gesture or a drag down, and asks first when something has been entered. On a short screen the footer scrolls with the fields.
+- **Choices on the form.** Category is a two-by-two grid of tiles with icons. Severity is one four-part scale, Low to Critical, whose chosen part takes that Severity's colour: it is an order, so it is drawn as one.
+- **A field's label sits above it**, always visible, with the character count beside it; the placeholder suggests what to write. The line under a field appears only for an error.
+- **Form rhythm:** 16 dp between sections, 6 dp inside one.
 - **Account actions** live in a bottom sheet behind the avatar on the phone; opening it is the pause a confirm dialog would give.
+- **A refused action shows why.** When a submit is refused, the first problem is scrolled into view; a requirement is stated on the form before it is broken ("Photos · at least one").
+- **A saved report is confirmed** with a short message on the list, which scrolls to it.
+- **The keyboard resizes the screen** on the phone; it never pushes the top bar away or covers the main action.
+- **Photos open full screen** on a tap, uncropped. One photo fills the width; several scroll.
 - **Losing work asks first.** The phone's form asks before discarding anything entered; an untouched form just closes.
 - **Every data view has four states:** loading, empty (saying why), loaded, and failed (saying what happened and what to do).
 - **Time** is shown in the viewer's zone as `10 Nov 2026, 14:45` on both platforms.
@@ -101,7 +121,8 @@ No gradients and no decorative shadows on either platform. Depth comes from the 
 
 ## Accessibility
 
-- Text contrast is at least 4.5:1 in both themes, including every badge.
+- Text contrast is at least 4.5:1 in both themes, including every badge, and the edge of an input or dropdown is at least 3:1 against what it sits on. These are measured, not judged by eye: the lowest text pair is 5.2:1.
+- On the phone every Material colour role is set in `ui/Theme.kt`. A role left out falls back to Material's purple baseline.
 - Meaning carried by colour is also carried by text or an icon.
 - Web: every control has a visible label, focus is always visible, the first Tab stop is "Skip to content", a table row is one link, errors are tied to their field with `aria-describedby`.
 - Mobile: icons that act have a `contentDescription`, decorative ones have none, headings are marked for screen readers, chips announce themselves as a single-choice group, errors that appear away from the tapped button are announced.

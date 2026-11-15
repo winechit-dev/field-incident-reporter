@@ -40,3 +40,9 @@ kotlin {
         }
     }
 }
+
+// The bundled display typeface (composeResources/font) is read through this generated class.
+compose.resources {
+    packageOfResClass = "dev.fieldreporter.feature.incidents.resources"
+    publicResClass = false
+}

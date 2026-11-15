@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- What shows before Compose draws its first frame. The background matches the app's own
+         (ui/Theme.kt), so launching never flashes a different colour. -->
+    <style name="Theme.FieldReporter" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

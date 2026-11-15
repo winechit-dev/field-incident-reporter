@@ -17,7 +17,7 @@ export function EmptyState({ title, description, children }: { title: string; de
     <Panel>
       <Inbox aria-hidden="true" className="size-8 text-muted-foreground" />
       <div className="flex flex-col gap-1">
-        <p className="font-medium">{title}</p>
+        <p className="type-title">{title}</p>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {children}
@@ -31,7 +31,7 @@ export function ApiUnavailable({ message }: { message: string }) {
     <Panel role="alert" className="border-destructive/40">
       <CloudOff aria-hidden="true" className="size-8 text-destructive" />
       <div className="flex flex-col gap-1">
-        <p className="font-medium">{message}</p>
+        <p className="type-title">{message}</p>
         <p className="text-sm text-muted-foreground">Start the backend, then try again.</p>
       </div>
       <RetryButton />

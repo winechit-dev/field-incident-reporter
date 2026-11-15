@@ -4,6 +4,8 @@ An audit of the three lanes, done by reading every screen's code and running eac
 
 A second pass, on the visual design rather than usability, followed this audit. It is tracked in `docs/handoffs/008-visual-redesign.md`, with its own before and after screenshots in `docs/screenshots/redesign/`.
 
+A third pass audited by use rather than by reading: the report flow run end to end with a real photo, contrast measured for every colour pair, and the states earlier passes had listed as unchecked. Its findings and fixes are in `docs/handoffs/009-verification-pass.md`.
+
 ## Across the product
 
 | # | Problem | Fix |

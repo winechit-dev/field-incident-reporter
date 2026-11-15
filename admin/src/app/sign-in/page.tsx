@@ -15,7 +15,7 @@ export default function SignInPage() {
   return (
     <main id="main" className="mx-auto flex max-w-md flex-col gap-6 pt-12">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Who are you?</h1>
+        <h1 className="type-headline">Who are you?</h1>
         <p className="text-sm text-muted-foreground">Choose your name to triage incidents. There is no password.</p>
       </div>
       <Suspense fallback={<OperatorsSkeleton />}>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import coil3.compose.AsyncImage
 import dev.fieldreporter.core.domain.Incident
 import dev.fieldreporter.core.domain.Status
@@ -86,6 +88,7 @@ fun IncidentListScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var showAccount by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -100,6 +103,11 @@ fun IncidentListScreen(
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete()
                 }
                 is ListEvent.Message -> snackbar.showSnackbar(event.text)
+                ListEvent.ReportSaved -> {
+                    // The new report is newest, so it is first: bring it into view, then say so.
+                    launch { listState.animateScrollToItem(0) }
+                    snackbar.showSnackbar("Report saved", duration = SnackbarDuration.Short)
+                }
             }
         }
     }
@@ -160,6 +168,7 @@ fun IncidentListScreen(
                     else -> ContentWidth {
                         LazyColumn(
                             Modifier.fillMaxSize(),
+                            state = listState,
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {

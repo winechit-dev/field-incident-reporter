@@ -30,7 +30,7 @@ Start the mock API first (`backend/`, `npm start`), then the dashboard. Pick an 
 
 ## Behaviour
 
-- Filters (search, Status, Severity, Category, assignee or Unassigned, reported date range, sort, page) live in the URL as a plain GET form. Changing a dropdown applies it at once; search and dates wait for Enter or Apply, which also works without JavaScript. Invalid values in the URL are ignored. Unassigned is `assigned=false` in the URL (the dropdown submits a reserved value that is read as the same thing, and links the page builds use `assigned=false`); it excludes a specific assignee.
+- Filters (search, Status, Severity, Category, assignee or Unassigned, reported date range, sort, page) live in the URL as a plain GET form. Changing a dropdown applies it at once; search and dates wait for Enter or Apply, which also works without JavaScript. Invalid values in the URL are ignored, and a URL that is not in its shortest form (a submitted form adds every empty field) is redirected to it (`canonicalHref`). Unassigned is `assigned=false` in the URL (the dropdown submits a reserved value that is read as the same thing, and links the page builds use `assigned=false`); it excludes a specific assignee.
 - Four tiles above the list (Open, In progress, Unassigned, Resolved) show how many Incidents are in each and narrow the list to it in one click; a second click clears it. Their counts cover every Incident, whatever the list is filtered to, and cost one single-row request each (`src/lib/overview.ts`).
 - Dates are whole days in UTC. Times display in the browser's local zone.
 - The API's `X-Total-Count` header drives paging (20 per page). The page controls appear only when there is more than one page.
