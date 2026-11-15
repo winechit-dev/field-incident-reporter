@@ -23,6 +23,33 @@ flowchart LR
     Dash -. "types generated from" .-> Spec
 ```
 
+## Screenshots
+
+**The phone app (Android).** A technician reports an incident with a photo and GPS location, edits one while offline, and later sees the operator's progress.
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/android-list.png" width="180" alt="Incident list on the phone"><br><sub>The list. The incident just reported from the phone is at the top, already synced.</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-report.png" width="180" alt="Report form with category, severity, GPS location and a photo"><br><sub>Reporting: category, severity, GPS location and a compressed photo.</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-detail.png" width="180" alt="Incident detail with a photo"><br><sub>Detail, with the photo loaded from the server.</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-offline.png" width="180" alt="List with an incident marked Waiting to sync"><br><sub>Edited with no network: saved on the device, <em>Waiting to sync</em>.</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-refreshed.png" width="180" alt="List after the operator started work"><br><sub>Back online and refreshed: the operator's <em>In progress</em>, and the offline edit has synced.</sub></td>
+  </tr>
+</table>
+
+**The operator dashboard.** Filters live in the URL, and an operator triages from the detail page.
+
+![Dashboard incident list](docs/screenshots/admin-list.png)
+*All incidents, including the one reported from the phone above.*
+
+![Dashboard list filtered to Critical severity](docs/screenshots/admin-filtered.png)
+*Filtering by severity.*
+
+![Dashboard incident detail with triage actions](docs/screenshots/admin-detail.png)
+*An incident that was started and resolved from the dashboard: resolution note, photo and activity log.*
+
+The photos in these screenshots are a drawn placeholder, not a real site photo.
+
 ## Run it
 
 You need Node and a JDK (developed with Node 26 and JDK 21). For Android, the Android SDK and an emulator; for iOS, Xcode.
@@ -109,6 +136,6 @@ The repo includes a workflow for coding agents working on the three parts in par
 | Android app | Report, view, edit, delete, offline sync, camera and gallery, location, WorkManager sync. Run on an emulator. |
 | Dashboard | Sign-in, filterable list, detail page, triage actions. Run in a browser. |
 | iOS app | Builds and links, and shares all screens and logic. Its camera, location, photo compression and background sync are **not implemented yet**, so reports can't carry photos or coordinates there, and sync runs once without retry. Not yet run in the simulator. |
-| Not built | A demo video and screenshots, an automated cross-app integration test, filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
+| Not built | A demo video, an automated cross-app integration test, filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
 
 Smaller deviations from the original plan: the camera uses the system camera app instead of CameraX, and there is no map pin for adjusting a location.
