@@ -2,7 +2,7 @@
 # Checks that the agent workflow files agree with each other: every agent and skill parses,
 # every skill an agent preloads exists, every agent or skill a doc names exists, and the model
 # tables in the docs match the agent files. Run it after changing anything under .claude/,
-# AGENTS.md or docs/agents/. It checks the files, not behaviour: see README, "Troubleshooting".
+# AGENTS.md or docs/agents/. It checks the files, not behaviour: see docs/agents/README.md, "Troubleshooting".
 set -u
 cd "$(dirname "$0")/.."
 python3 - <<'PY'
