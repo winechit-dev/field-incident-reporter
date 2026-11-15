@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LocalTime } from "@/components/local-time";
 import { SeverityBadge, StatusBadge } from "@/components/status-badges";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,7 +23,9 @@ export function IncidentTable({ incidents, users }: { incidents: Incident[]; use
       <TableBody>
         {incidents.map((incident) => (
           <TableRow key={incident.id}>
-            <TableCell className="max-w-72 truncate font-medium">{incident.title}</TableCell>
+            <TableCell className="max-w-72 truncate font-medium">
+              <Link href={`/incidents/${incident.id}`} className="hover:underline">{incident.title}</Link>
+            </TableCell>
             <TableCell><StatusBadge status={incident.status} /></TableCell>
             <TableCell><SeverityBadge severity={incident.severity} /></TableCell>
             <TableCell>{CATEGORY_LABEL[incident.category]}</TableCell>
