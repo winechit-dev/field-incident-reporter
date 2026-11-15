@@ -28,5 +28,6 @@ A gate is **green** or **red**; there is no amber. Paste the final output of eac
 
 ## Integration (`integration-verifier`)
 - Backend running; one acceptance scenario per criterion passes end to end across lanes.
-- Mobile conflict scenario: edit offline, Operator changes Status, sync shows the server version and a failure notice.
+- `scripts/integration/run-conflicts.sh` passes: the app's sync engine, the API and the dashboard's "Start work" agree on a conflict when a Technician edits or deletes offline and an Operator takes the incident meanwhile. It starts its own API, so nothing else needs to be running. Run it after any change to sync logic, the DTOs, the contract's conflict rules, or what "Start work" sends.
+- Mobile conflict scenario on a device: edit offline, Operator changes Status, sync shows the server version and a failure notice. (The script above covers the logic; the notice on screen is still checked by hand.)
 - The admin dashboard shows what the mobile app reported.

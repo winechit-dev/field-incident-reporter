@@ -46,4 +46,17 @@ Final API state: every incident matches what the scenarios should have produced,
 
 ## Open questions
 - None from the scenarios. Every one behaved as the contract and the ADRs describe.
-- Worth automating later: a script that drives scenarios 3 and 4 against a running API (the apps' sync logic is already unit-tested; the gap is the three parts together).
+- Scenarios 3 and 4 are now automated (see below). Scenarios 1, 2 and 5 are still manual, and so is anything about what the screen shows (the badge, the notice).
+
+## Automated conflicts
+`scripts/integration/run-conflicts.sh` starts a throwaway API and runs two tests against it:
+- **Dashboard** (`admin/src/integration/start-work.itest.ts`, `npm run test:integration`): the dashboard's real triage code and typed client. "Start work" must send exactly `scripts/integration/fixtures/start-work-patch.json`, the API must accept and record it, and a Technician's later edit and delete must then be refused with `409 NOT_OPEN`.
+- **App** (`mobile/core/data/src/androidHostTest/.../ConflictIntegrationTest.kt`): the app's real `SyncEngine`, repository and Ktor client over real HTTP, with an in-memory store. "Offline" means not calling `sync()`. The Operator step sends the same fixture. It checks scenario 3 (edit discarded, server version shown, `CONFLICT` failure with the server's message, nothing left to retry, server unchanged) and scenario 4 (the incident returns to the list, is marked failed, and still exists on the server), plus a control that an ordinary report syncs.
+
+The two tests share the fixture, so if the dashboard changes what "Start work" sends, its test fails until the fixture is updated, and the app's test follows.
+
+Both skip themselves when no API is configured, so `npm test` and the normal Gradle runs are unaffected (the app test then shows as 3 skipped, not passed).
+
+**Checked that it can fail.** With the backend's Open-only rule disabled, the dashboard test failed (`expected 200 to be 409`) and the app test failed. With the app's conflict handling replaced by a plain rejection, the control still passed and both conflict tests failed (for example "the local edit is discarded: expected '…oil' but was '…oil - field note'"). Both changes were reverted.
+
+**What it does not cover:** the on-screen result (the badge and the notice), real device networking, the iOS app, and the dashboard's UI (it runs the dashboard's code, not a browser).
