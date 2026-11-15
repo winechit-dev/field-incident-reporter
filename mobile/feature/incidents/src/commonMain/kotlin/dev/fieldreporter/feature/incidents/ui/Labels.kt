@@ -32,6 +32,18 @@ fun Status.label() = when (this) {
     Status.RESOLVED -> "Resolved"
 }
 
+/** How serious, from 1 (Low) to 4 (Critical). Drawn as that many filled bars out of four. */
+fun Severity.level(): Int = when (this) {
+    Severity.LOW -> 1
+    Severity.MEDIUM -> 2
+    Severity.HIGH -> 3
+    Severity.CRITICAL -> 4
+}
+
+/** The letters shown in a person's avatar: the first letter of up to two names. */
+fun initials(name: String): String =
+    name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
+
 /** A tinted background and the text colour that reads on it. */
 data class Tone(val container: Color, val content: Color)
 

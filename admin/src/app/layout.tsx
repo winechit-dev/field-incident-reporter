@@ -24,10 +24,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <header className="sticky top-0 z-10 border-b bg-card">
+        <header className="sticky top-0 z-10 border-b bg-card/85 backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
             {/* The dashboard has one section, so the product name is the way home; no sidebar. */}
-            <Link href="/incidents" className="flex items-center gap-2 rounded-md font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <Link href="/incidents" className="flex items-center gap-2 rounded-md font-semibold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
               <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <ClipboardList aria-hidden="true" className="size-4" />
               </span>

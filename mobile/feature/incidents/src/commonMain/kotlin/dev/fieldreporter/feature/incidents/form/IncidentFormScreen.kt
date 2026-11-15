@@ -4,9 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,23 +44,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.fieldreporter.core.domain.Category
 import dev.fieldreporter.core.domain.MAX_PHOTOS
 import dev.fieldreporter.core.domain.Severity
 import dev.fieldreporter.feature.incidents.PlatformCapabilities
+import dev.fieldreporter.feature.incidents.ui.AppCard
+import dev.fieldreporter.feature.incidents.ui.AppIcons
 import dev.fieldreporter.feature.incidents.ui.ChoiceChips
 import dev.fieldreporter.feature.incidents.ui.ContentWidth
+import dev.fieldreporter.feature.incidents.ui.LocalDarkTheme
 import dev.fieldreporter.feature.incidents.ui.Notice
 import dev.fieldreporter.feature.incidents.ui.PhotoStrip
 import dev.fieldreporter.feature.incidents.ui.SectionLabel
 import dev.fieldreporter.feature.incidents.ui.label
+import dev.fieldreporter.feature.incidents.ui.tone
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -83,7 +90,7 @@ fun IncidentFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (editing) "Edit incident" else "Report incident") },
+                title = { Text(if (editing) "Edit incident" else "Report incident", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = { IconButton(onClick = close) { Icon(Icons.Filled.Close, contentDescription = "Close") } },
             )
         },
@@ -106,32 +113,33 @@ fun IncidentFormScreen(
         ContentWidth(Modifier.padding(padding)) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 state.blockedMessage?.let { Notice(title = null, body = it) }
 
+                val dark = LocalDarkTheme.current
                 val sentences = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 OutlinedTextField(
                     value = state.title, onValueChange = viewModel::onTitle, label = { Text("Title") },
                     isError = state.titleError != null, supportingText = state.titleError?.let { { Text(it) } },
-                    singleLine = true, keyboardOptions = sentences.copy(imeAction = ImeAction.Next), modifier = Modifier.fillMaxWidth(),
+                    singleLine = true, keyboardOptions = sentences.copy(imeAction = ImeAction.Next), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = state.description, onValueChange = viewModel::onDescription, label = { Text("What happened?") },
                     isError = state.descriptionError != null,
                     // The limit is shown while typing, not only as an error after submitting.
                     supportingText = { Text(state.descriptionError ?: "${state.description.length}/$MAX_DESCRIPTION") },
-                    minLines = 3, keyboardOptions = sentences, modifier = Modifier.fillMaxWidth(),
+                    minLines = 3, keyboardOptions = sentences, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth(),
                 )
 
                 Group("Category") { ChoiceChips(Category.entries, state.category, { it.label() }, viewModel::onCategory) }
-                Group("Severity") { ChoiceChips(Severity.entries, state.severity, { it.label() }, viewModel::onSeverity) }
+                Group("Severity") { ChoiceChips(Severity.entries, state.severity, { it.label() }, viewModel::onSeverity, tone = { it.tone(dark) }) }
 
                 Group("Location") {
                     OutlinedTextField(
                         value = state.location.address.orEmpty(), onValueChange = viewModel::onAddress,
                         label = { Text("Address or landmark") }, singleLine = true,
-                        keyboardOptions = sentences.copy(imeAction = ImeAction.Done), modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = sentences.copy(imeAction = ImeAction.Done), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth(),
                     )
                     if (state.location.hasCoordinates) {
                         Text(
@@ -155,9 +163,9 @@ fun IncidentFormScreen(
                         })
                     }
                     if (photoActions != null && state.canAddPhoto) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(onClick = photoActions.takePhoto) { Text("Take photo") }
-                            OutlinedButton(onClick = photoActions.pickFromGallery) { Text("Choose from gallery") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            AddPhotoTile(AppIcons.Camera, "Take photo", photoActions.takePhoto, Modifier.weight(1f))
+                            AddPhotoTile(AppIcons.Image, "From gallery", photoActions.pickFromGallery, Modifier.weight(1f))
                         }
                     }
                     state.photoError?.let { ErrorText(it) }
@@ -189,6 +197,21 @@ private fun Group(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/** One way to add a photo: a large, labelled target instead of a small text button. */
+@Composable
+private fun AddPhotoTile(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AppCard(modifier, onClick = onClick) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        }
+    }
+}
+
 /** A field problem. Announced when it appears, because it shows up away from the button that caused it. */
 @Composable
 private fun ErrorText(text: String) {
@@ -207,7 +230,7 @@ private fun SubmitBar(label: String, saving: Boolean, enabled: Boolean, onSubmit
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             ContentWidth(Modifier.navigationBarsPadding()) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onSubmit, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onSubmit, enabled = enabled, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                         if (saving) {
                             CircularProgressIndicator(Modifier.size(ButtonDefaults.IconSize), color = LocalContentColor.current, strokeWidth = 2.dp)
                             Text("Saving…", Modifier.padding(start = ButtonDefaults.IconSpacing))
@@ -217,7 +240,9 @@ private fun SubmitBar(label: String, saving: Boolean, enabled: Boolean, onSubmit
                     }
                     Text(
                         "Saved on this device first. It syncs when you're online.",
+                        Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }

@@ -38,7 +38,7 @@ export function IncidentDetail({ incident, users }: { incident: Incident; users:
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-balance">{incident.title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-balance">{incident.title}</h1>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <StatusBadge status={incident.status} />
           <SeverityBadge severity={incident.severity} />
@@ -136,7 +136,7 @@ export function IncidentDetail({ incident, users }: { incident: Incident; users:
 
           <Section title="Details">
             <dl className="flex flex-col gap-2">
-              <Row label="Assignee">{nameOf(incident.assignee) ?? "Unassigned"}</Row>
+              <Row label="Assignee">{nameOf(incident.assignee) ?? <span className="text-muted-foreground">Unassigned</span>}</Row>
               <Row label="Reported by">{nameOf(incident.reportedBy)}</Row>
               <Row label="Reported"><LocalTime iso={incident.createdAt} /></Row>
               <Row label="Last updated"><LocalTime iso={incident.updatedAt} /></Row>

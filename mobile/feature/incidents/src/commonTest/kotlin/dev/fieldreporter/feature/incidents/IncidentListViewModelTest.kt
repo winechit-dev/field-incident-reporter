@@ -1,5 +1,6 @@
 package dev.fieldreporter.feature.incidents
 
+import dev.fieldreporter.core.domain.Status
 import dev.fieldreporter.feature.incidents.list.IncidentListViewModel
 import dev.fieldreporter.feature.incidents.list.ListEvent
 import kotlinx.coroutines.Dispatchers
@@ -91,5 +92,54 @@ class IncidentListViewModelTest {
 
         assertEquals(listOf("a"), seen.last())
         assertTrue(events.any { it is ListEvent.Message })
+    }
+
+    private val mixed = listOf(
+        anIncident("a", Status.OPEN), anIncident("b", Status.OPEN),
+        anIncident("c", Status.IN_PROGRESS), anIncident("d", Status.RESOLVED),
+    )
+
+    @Test
+    fun aStatusFilterShowsOnlyThatStatusAndClearingItShowsEverything() = runTest {
+        val vm = setUp(FakeIncidentRepository(mixed), this)
+        vm.state.launchIn(backgroundScope)
+        advanceUntilIdle()
+        assertEquals(null, vm.state.value.filter)
+        assertEquals(4, vm.state.value.incidents.size)
+
+        vm.onFilter(Status.OPEN)
+        advanceUntilIdle()
+        assertEquals(listOf("a", "b"), vm.state.value.incidents.map { it.id })
+
+        vm.onFilter(null)
+        advanceUntilIdle()
+        assertEquals(4, vm.state.value.incidents.size)
+    }
+
+    @Test
+    fun countsCoverEveryStatusAndDoNotChangeWithTheFilter() = runTest {
+        val vm = setUp(FakeIncidentRepository(mixed), this)
+        vm.state.launchIn(backgroundScope)
+        advanceUntilIdle()
+        val expected = mapOf(Status.OPEN to 2, Status.IN_PROGRESS to 1, Status.RESOLVED to 1)
+        assertEquals(expected, vm.state.value.counts)
+        assertEquals(4, vm.state.value.total)
+
+        vm.onFilter(Status.RESOLVED)
+        advanceUntilIdle()
+        assertEquals(expected, vm.state.value.counts, "the chips keep showing how many there are of each")
+        assertEquals(4, vm.state.value.total)
+    }
+
+    @Test
+    fun anIncidentWaitingOutItsUndoWindowIsNotCounted() = runTest {
+        val vm = setUp(FakeIncidentRepository(mixed), this)
+        vm.state.launchIn(backgroundScope)
+        advanceUntilIdle()
+
+        vm.requestDelete(mixed[0])
+        advanceTimeBy(1_000)
+        assertEquals(1, vm.state.value.counts[Status.OPEN])
+        assertEquals(3, vm.state.value.total)
     }
 }

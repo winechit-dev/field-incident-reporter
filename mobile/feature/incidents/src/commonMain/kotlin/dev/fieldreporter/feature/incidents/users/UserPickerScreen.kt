@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -27,13 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.fieldreporter.core.domain.User
 import dev.fieldreporter.feature.incidents.ui.AppCard
+import dev.fieldreporter.feature.incidents.ui.Avatar
 import dev.fieldreporter.feature.incidents.ui.ContentWidth
 import dev.fieldreporter.feature.incidents.ui.EmptyState
 
@@ -44,11 +44,18 @@ fun UserPickerScreen(viewModel: UserPickerViewModel) {
         ContentWidth(Modifier.padding(padding).fillMaxSize()) {
             LazyColumn(
                 Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 40.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "header") {
-                    Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // The product's mark, the same glyph on the same blue as the dashboard's header.
+                        Box(
+                            Modifier.padding(bottom = 16.dp).size(56.dp).background(MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onPrimary)
+                        }
                         Text("Who are you?", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineMedium)
                         Text(
                             "Pick your name to see and report your incidents.",
@@ -84,15 +91,11 @@ fun UserPickerScreen(viewModel: UserPickerViewModel) {
 private fun TechnicianRow(user: User, onClick: () -> Unit) {
     AppCard(Modifier.fillMaxWidth(), onClick = onClick) {
         Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Decorative: the name beside it is what a screen reader should say.
-            Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-                Text(
-                    user.name.split(' ').mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString(""),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+            Avatar(user.name, size = 44.dp)
+            Column(Modifier.weight(1f)) {
+                Text(user.name, style = MaterialTheme.typography.titleMedium)
+                Text("Technician", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(user.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

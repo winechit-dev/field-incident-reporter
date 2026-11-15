@@ -46,10 +46,12 @@ On the web these are Tailwind's `*-100` with `*-800/900` and `*-950` with `*-300
 | Use | Admin | Mobile |
 | --- | --- | --- |
 | Typeface | Geist | the platform's default (Roboto, San Francisco) |
-| Page or screen title | `text-2xl font-semibold` | top app bar title; `headlineSmall` for an Incident's title |
-| Card or section title | `text-base font-medium` | `titleMedium` |
+| Weight | semibold titles with `tracking-tight` | semibold headlines, titles and `labelLarge`; headlines slightly tightened (`ui/Theme.kt`) |
+| Page or screen title | `text-2xl font-semibold tracking-tight` | `headlineSmall` in the list's top bar and for an Incident's title; `titleLarge` in other top bars |
+| Headline number | `text-3xl font-semibold tracking-tight` (overview tiles) | not used |
+| Card or section title | `text-base font-medium` | `titleMedium`; `titleSmall` for a section label |
 | Body | `text-sm` | `bodyLarge` for content, `bodyMedium` for supporting text |
-| Field and section label | `text-xs font-medium text-muted-foreground` | `labelLarge` in `onSurfaceVariant` (`SectionLabel`) |
+| Field label | `text-xs font-medium text-muted-foreground` | the field's own floating label |
 | Badge | `text-xs font-medium` | `labelMedium` |
 
 ## Spacing and shape
@@ -58,8 +60,9 @@ On the web these are Tailwind's `*-100` with `*-800/900` and `*-950` with `*-300
 | --- | --- | --- |
 | Steps | `gap-2` in a control group, `gap-3` between controls, `gap-4` in a form or card, `gap-5` between page sections | 4, 8, 12, 16 dp; 32 dp around an empty state |
 | Page padding | `px-4 sm:px-6 py-6`, content capped at `max-w-7xl` | 16 dp, content capped at 640 dp (`ContentWidth`) |
-| Card | `rounded-xl`, hairline border, no shadow | Material's medium shape, hairline border, no elevation (`AppCard`) |
-| Control | `rounded-lg`, 32 px high | Material defaults; every touch target at least 48 dp |
+| Card | `rounded-xl`, hairline border, no shadow | 20 dp corners, hairline border, no elevation (`AppCard`) |
+| Control | `rounded-lg`, 32 px high | 12 dp corners on text fields, fully rounded buttons and chips; the main button is 48 to 52 dp high; every touch target at least 48 dp |
+| Sheet and dialog | not used | 28 dp corners |
 | Badge | fully rounded | fully rounded (`Pill`) |
 
 No gradients and no decorative shadows on either platform. Depth comes from the card sitting on a slightly darker page.
@@ -68,7 +71,11 @@ No gradients and no decorative shadows on either platform. Depth comes from the 
 
 | Need | Admin | Mobile |
 | --- | --- | --- |
-| Status, Severity | `StatusBadge`, `SeverityBadge` | `StatusPill`, `SeverityPill`; `IncidentPills` for the set |
+| Status | `StatusBadge`: a tinted pill with a dot | `StatusPill`: the same |
+| Severity | `SeverityBadge`: one to four bars and the word | `SeverityLevel`: the same; `IncidentPills` for Status, Severity, Category and Sync State together |
+| A person | `Avatar` (initials on a tinted disc) | `Avatar` |
+| Headline counts | `Overview`: four tiles that are also one-click filters | the Status chips above the list, each with its count |
+| A fact with an icon | definition list in a `Card` | `InfoRow` inside an `AppCard` |
 | Main and other actions | `Button`: `default` for the one main action, `outline` for the others, `secondary` for Save, `ghost` for navigation | `Button` for the main action, `OutlinedButton` for the others, `TextButton` in dialogs |
 | Text and choices | `Input`, `Textarea`, `NativeSelect`, wrapped in `Field` | `OutlinedTextField`, `ChoiceChips` |
 | Container | `Card` | `AppCard` |
@@ -77,16 +84,19 @@ No gradients and no decorative shadows on either platform. Depth comes from the 
 | Something was refused | `role="alert"` text beside the control | `Notice`, `FailureBanner` |
 | Loading | `Skeleton` shapes that mirror the loaded layout | `CircularProgressIndicator` |
 | Time | `LocalTime` | `Instant.display()` |
-| Icons | `lucide-react` | `material-icons-core` |
+| Icons | `lucide-react` | `material-icons-core`, plus `AppIcons.Camera` and `AppIcons.Image` drawn in `ui/Icons.kt` |
 
 ## Patterns
 
+- **Status and Severity look different on purpose.** Status is the one tinted pill; Severity is four bars and a word. Two same-shaped badges side by side read as the same kind of thing.
+- **Counts double as filters.** The dashboard's tiles and the phone's chips each show how many Incidents are in a Status and narrow the list to it in one tap. The counts cover everything, whatever the list is filtered to.
 - **One main action per view.** It is the only filled button. On the dashboard's triage panel it is the usual next step for the Status (`primaryAction`); on the phone it sits in a bottom bar so it is reachable without scrolling.
 - **Destructive actions** are outlined in the error colour, never filled, and ask first (Delete) or offer Undo afterwards.
+- **Account actions** live in a bottom sheet behind the avatar on the phone; opening it is the pause a confirm dialog would give.
 - **Losing work asks first.** The phone's form asks before discarding anything entered; an untouched form just closes.
 - **Every data view has four states:** loading, empty (saying why), loaded, and failed (saying what happened and what to do).
 - **Time** is shown in the viewer's zone as `10 Nov 2026, 14:45` on both platforms.
-- **Motion** is short and functional: a 150 ms cross-fade between phone screens, list items that slide when one is removed, colour transitions on hover. Skeletons stop pulsing under `prefers-reduced-motion`.
+- **Motion** is short and functional: a 220 ms fade with a short slide in the direction of travel between phone screens, list items that slide when one is removed, colour transitions on hover. Skeletons stop pulsing under `prefers-reduced-motion`.
 - **Copy** uses the glossary terms, sentence case, and a verb on every button.
 
 ## Accessibility

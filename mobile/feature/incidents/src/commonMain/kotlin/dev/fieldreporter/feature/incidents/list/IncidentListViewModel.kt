@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.fieldreporter.core.domain.Incident
 import dev.fieldreporter.core.domain.IncidentRepository
 import dev.fieldreporter.core.domain.NotEditableException
+import dev.fieldreporter.core.domain.Status
 import dev.fieldreporter.core.domain.SyncOutcome
 import dev.fieldreporter.core.domain.User
 import dev.fieldreporter.core.domain.UserRepository
@@ -24,6 +25,12 @@ data class IncidentListState(
     val incidents: List<Incident> = emptyList(),
     val refreshing: Boolean = false,
     val loaded: Boolean = false,
+    /** The Status the list is narrowed to, or null for all. [incidents] is already narrowed. */
+    val filter: Status? = null,
+    /** How many Incidents there are of each Status, whatever the filter. Every Status has an entry. */
+    val counts: Map<Status, Int> = emptyMap(),
+    /** How many Incidents there are before the filter. */
+    val total: Int = 0,
 )
 
 sealed interface ListEvent {
@@ -43,21 +50,31 @@ class IncidentListViewModel(
 ) : ViewModel() {
     private val hidden = MutableStateFlow<Set<String>>(emptySet())
     private val refreshing = MutableStateFlow(false)
+    private val filter = MutableStateFlow<Status?>(null)
     private val pendingDeletes = mutableMapOf<String, Job>()
     private var lastDeleted: String? = null
     private val _events = Channel<ListEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
     val state: StateFlow<IncidentListState> = combine(
-        users.currentUser, incidents.incidents, hidden, refreshing,
-    ) { user, list, hiddenIds, isRefreshing ->
+        users.currentUser, incidents.incidents, hidden, refreshing, filter,
+    ) { user, list, hiddenIds, isRefreshing, status ->
+        val shown = list.filter { it.id !in hiddenIds }
         IncidentListState(
             user = user,
-            incidents = list.filter { it.id !in hiddenIds },
+            incidents = if (status == null) shown else shown.filter { it.status == status },
             refreshing = isRefreshing,
             loaded = true,
+            filter = status,
+            counts = Status.entries.associateWith { s -> shown.count { it.status == s } },
+            total = shown.size,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), IncidentListState())
+
+    /** Narrow the list to one Status, or pass null to show every Incident. */
+    fun onFilter(status: Status?) {
+        filter.value = status
+    }
 
     init {
         refresh(quiet = true)

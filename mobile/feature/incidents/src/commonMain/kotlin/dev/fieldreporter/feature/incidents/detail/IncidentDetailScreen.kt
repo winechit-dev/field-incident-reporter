@@ -1,21 +1,28 @@
 package dev.fieldreporter.feature.incidents.detail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -44,15 +51,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.fieldreporter.core.domain.Incident
+import dev.fieldreporter.feature.incidents.ui.AppCard
 import dev.fieldreporter.feature.incidents.ui.ContentWidth
 import dev.fieldreporter.feature.incidents.ui.EmptyState
 import dev.fieldreporter.feature.incidents.ui.FailureBanner
 import dev.fieldreporter.feature.incidents.ui.IncidentPills
+import dev.fieldreporter.feature.incidents.ui.InfoRow
+import dev.fieldreporter.feature.incidents.ui.LocalDarkTheme
 import dev.fieldreporter.feature.incidents.ui.PhotoStrip
 import dev.fieldreporter.feature.incidents.ui.SectionLabel
 import dev.fieldreporter.feature.incidents.ui.display
 import dev.fieldreporter.feature.incidents.ui.imageModel
 import dev.fieldreporter.feature.incidents.ui.label
+import dev.fieldreporter.feature.incidents.ui.tone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +80,7 @@ fun IncidentDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Incident") },
+                title = { Text("Incident", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
@@ -117,13 +128,13 @@ private fun Actions(onEdit: () -> Unit, onDelete: () -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(
                         onClick = onDelete,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     ) {
                         Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Text("Delete", Modifier.padding(start = ButtonDefaults.IconSpacing))
                     }
-                    Button(onClick = onEdit, modifier = Modifier.weight(1f)) {
+                    Button(onClick = onEdit, modifier = Modifier.weight(1f).height(48.dp)) {
                         Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Text("Edit", Modifier.padding(start = ButtonDefaults.IconSpacing))
                     }
@@ -137,18 +148,29 @@ private fun Actions(onEdit: () -> Unit, onDelete: () -> Unit) {
 private fun Content(incident: Incident, assigneeName: String?, onDismissFailure: () -> Unit) {
     ContentWidth {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            FailureBanner(incident, onDismissFailure)
+            val side = Modifier.padding(horizontal = 16.dp)
+            if (incident.syncFailure != null) FailureBanner(incident, onDismissFailure, side)
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Photos first and large: they are what a Technician recognises an Incident by. The
+            // strip scrolls edge to edge, so its padding is inside it rather than around it.
+            val photos = incident.photos.mapNotNull { p -> p.imageModel()?.let { p.id to it } }
+            if (photos.isNotEmpty()) {
+                PhotoStrip(photos, width = 280.dp, height = 200.dp, contentPadding = PaddingValues(horizontal = 16.dp))
+            }
+
+            Column(side, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(incident.title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
-                IncidentPills(incident, showCategory = true)
+                IncidentPills(incident)
             }
             if (!incident.isEditable) {
                 // Said up front, where the Edit and Delete buttons would otherwise be looked for.
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    side.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.medium).padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     Icon(Icons.Filled.Info, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "An operator is already handling this incident, so it can't be changed.",
@@ -158,30 +180,38 @@ private fun Content(incident: Incident, assigneeName: String?, onDismissFailure:
                 }
             }
 
-            val photos = incident.photos.mapNotNull { p -> p.imageModel()?.let { p.id to it } }
-            if (photos.isNotEmpty()) PhotoStrip(photos)
-
             if (incident.description.isNotBlank()) {
-                Section("What happened") { Text(incident.description, style = MaterialTheme.typography.bodyLarge) }
+                Section("What happened", side) { Text(incident.description, style = MaterialTheme.typography.bodyLarge) }
             }
-            Section("Location") {
+
+            AppCard(side.fillMaxWidth()) {
                 val loc = incident.location
-                val parts = buildList {
+                val where = buildList {
                     loc.address?.let { add(it) }
                     if (loc.hasCoordinates) add("${loc.latitude}, ${loc.longitude}")
+                }.joinToString("\n").ifEmpty { "Location unavailable" }
+                InfoRow(Icons.Filled.LocationOn, "Location", where)
+                HorizontalDivider(Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                InfoRow(Icons.Filled.DateRange, "Reported", incident.createdAt.display())
+                if (incident.assignee != null) {
+                    HorizontalDivider(Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    InfoRow(Icons.Filled.Person, "Handling", handlingText(assigneeName))
                 }
-                Text(parts.joinToString("\n").ifEmpty { "Location unavailable" }, style = MaterialTheme.typography.bodyLarge)
             }
-            Section("Reported") { Text(incident.createdAt.display(), style = MaterialTheme.typography.bodyLarge) }
 
-            if (incident.assignee != null) Section("Handling") { Text(handlingText(assigneeName), style = MaterialTheme.typography.bodyLarge) }
             incident.resolutionNote?.takeIf { it.isNotBlank() }?.let { note ->
-                Section("Resolution") { Text(note, style = MaterialTheme.typography.bodyLarge) }
+                Section("Resolution", side) { Text(note, style = MaterialTheme.typography.bodyLarge) }
             }
             if (incident.activityLog.isNotEmpty()) {
-                Section("Activity") {
-                    incident.activityLog.forEach { entry ->
-                        Text("${entry.status.label()} · ${entry.at.display()}", style = MaterialTheme.typography.bodyMedium)
+                Section("Activity", side) {
+                    Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        incident.activityLog.forEach { entry ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(8.dp).background(entry.status.tone(LocalDarkTheme.current).content, CircleShape))
+                                Text(entry.status.label(), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                                Text(entry.at.display(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                 }
             }
@@ -194,8 +224,8 @@ internal fun handlingText(assigneeName: String?): String =
     if (assigneeName.isNullOrBlank()) "An operator is handling this incident." else "$assigneeName is handling this incident."
 
 @Composable
-private fun Section(title: String, body: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun Section(title: String, modifier: Modifier = Modifier, body: @Composable () -> Unit) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(title, Modifier.semantics { heading() })
         body()
     }

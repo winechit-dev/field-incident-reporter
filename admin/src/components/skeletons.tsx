@@ -4,6 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function IncidentsSkeleton() {
   return (
     <div role="status" aria-label="Loading incidents" className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[5.5rem] rounded-xl" />)}
+      </div>
       <Skeleton className="h-28 rounded-xl" />
       <div className="overflow-hidden rounded-xl border bg-card">
         {Array.from({ length: 6 }, (_, i) => (

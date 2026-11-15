@@ -17,6 +17,13 @@ export async function listIncidents(userId: string, filters: Filters): Promise<{
   return { incidents: data, total: Number.isFinite(total) ? total : data.length };
 }
 
+/** How many Incidents match `query`, read from `X-Total-Count`. Send `_limit: 1` so only one row travels. */
+export async function countIncidents(userId: string, query: ReturnType<typeof toApiQuery>): Promise<number> {
+  const { data, response } = await unwrap(createApi(userId).GET("/incidents", { params: { query } }));
+  const total = Number(response.headers.get("X-Total-Count"));
+  return Number.isFinite(total) ? total : data.length;
+}
+
 /** @throws ApiError with status 404 when the Incident does not exist. */
 export async function getIncident(userId: string, id: string): Promise<Incident> {
   const { data } = await unwrap(createApi(userId).GET("/incidents/{incidentId}", { params: { path: { incidentId: id } } }));

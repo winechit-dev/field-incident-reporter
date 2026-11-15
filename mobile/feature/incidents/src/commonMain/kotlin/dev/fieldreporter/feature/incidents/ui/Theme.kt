@@ -1,17 +1,23 @@
 package dev.fieldreporter.feature.incidents.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /*
  * The product's colours. The brand blue and the neutrals are the same values the dashboard uses
- * (admin/src/app/globals.css); see docs/design/design-system.md. Type and shapes stay Material 3's.
+ * (admin/src/app/globals.css); see docs/design/design-system.md.
  */
 private val LightColors = lightColorScheme(
     primary = Color(0xFF2A56C6),
@@ -73,6 +79,29 @@ private val DarkColors = darkColorScheme(
     onErrorContainer = Color(0xFFFFDAD6),
 )
 
+/*
+ * Material 3's scale on the platform typeface, with heavier titles and slightly tighter
+ * headlines, so a screen's hierarchy reads from weight as well as size.
+ */
+private val Base = Typography()
+private val AppTypography = Base.copy(
+    headlineMedium = Base.headlineMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
+    headlineSmall = Base.headlineSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp),
+    titleLarge = Base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+    titleMedium = Base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    titleSmall = Base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+    labelLarge = Base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+)
+
+/** Rounder than Material's defaults: 12 dp for fields and thumbnails, 20 dp for cards, 28 dp for sheets. */
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp),
+)
+
 /** Whether the dark scheme is showing. Status and Severity tones read it to pick their pair. */
 val LocalDarkTheme = staticCompositionLocalOf { false }
 
@@ -80,6 +109,6 @@ val LocalDarkTheme = staticCompositionLocalOf { false }
 @Composable
 fun FieldReporterTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDarkTheme provides dark) {
-        MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, content = content)
+        MaterialTheme(colorScheme = if (dark) DarkColors else LightColors, typography = AppTypography, shapes = AppShapes, content = content)
     }
 }

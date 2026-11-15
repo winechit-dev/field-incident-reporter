@@ -4,11 +4,16 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -70,15 +75,24 @@ private fun Signed(incidents: IncidentRepository, users: UserRepository, capabil
     val listViewModel = viewModel { IncidentListViewModel(incidents, users) }
     BackHandler(enabled = nav.canGoBack) { nav.back() }
 
-    // A short cross-fade between screens; long enough to read as a transition, short enough not to wait for.
+    // Going deeper slides in from the right, going back from the left; a short distance and a
+    // fade, enough to say which way you moved without making you wait.
+    val depth = nav.stack.size
+    var lastDepth by remember { mutableIntStateOf(depth) }
+    val forward = depth >= lastDepth
+    SideEffect { lastDepth = depth }
     AnimatedContent(
         targetState = nav.current,
-        transitionSpec = { fadeIn(tween(SCREEN_FADE_MS)) togetherWith fadeOut(tween(SCREEN_FADE_MS)) },
+        transitionSpec = {
+            val from: (Int) -> Int = { width -> (if (forward) width else -width) / 8 }
+            (fadeIn(tween(SCREEN_FADE_MS)) + slideInHorizontally(tween(SCREEN_FADE_MS), from)) togetherWith
+                (fadeOut(tween(SCREEN_FADE_MS / 2)) + slideOutHorizontally(tween(SCREEN_FADE_MS)) { width -> -from(width) })
+        },
         label = "screen",
     ) { screen -> Destination(screen, nav, listViewModel, incidents, users, capabilities) }
 }
 
-private const val SCREEN_FADE_MS = 150
+private const val SCREEN_FADE_MS = 220
 
 @Composable
 private fun Destination(

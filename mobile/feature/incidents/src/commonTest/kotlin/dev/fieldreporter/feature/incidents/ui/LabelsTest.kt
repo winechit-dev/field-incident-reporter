@@ -30,4 +30,17 @@ class LabelsTest {
             Status.entries.forEach { assertNotEquals(it.tone(dark).container, it.tone(dark).content) }
         }
     }
+
+    @Test
+    fun severityLevelsRiseFromOneToFour() {
+        assertEquals(listOf(1, 2, 3, 4), listOf(Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL).map { it.level() })
+    }
+
+    @Test
+    fun initialsAreTheFirstLettersOfUpToTwoNames() {
+        assertEquals("AK", initials("Aung Kyaw"))
+        assertEquals("M", initials("mya"))
+        assertEquals("AB", initials("  a  b  c "))
+        assertEquals("?", initials("  "))
+    }
 }

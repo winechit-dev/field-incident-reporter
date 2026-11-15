@@ -2,6 +2,8 @@
 
 An audit of the three lanes, done by reading every screen's code and running each app: the dashboard in Chrome at 1440, 768 and 420 px in both colour schemes, and the phone app on a Pixel 9 emulator in light, dark, portrait and landscape. Each finding is a usability problem that was observed, with what was done about it. The work is tracked in `docs/handoffs/007-ui-ux-polish.md`; the shared tokens and components are in `design-system.md`; before and after screenshots are in `docs/screenshots/ui-ux/`.
 
+A second pass, on the visual design rather than usability, followed this audit. It is tracked in `docs/handoffs/008-visual-redesign.md`, with its own before and after screenshots in `docs/screenshots/redesign/`.
+
 ## Across the product
 
 | # | Problem | Fix |

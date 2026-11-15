@@ -12,7 +12,8 @@ Tailwind 4 and shadcn/ui primitives in `src/components/ui/`. One look across the
 - Reach for a primitive in `src/components/ui/` first (`Button`, `Badge`, `Card`, `Input`, `NativeSelect`, `Select`, `Skeleton`, `Table`, `Textarea`). Add a missing one with the shadcn CLI so it matches `components.json`.
 - A control in a form that submits (the filter bar, the triage form) is a `NativeSelect` inside a `Field`; the popup `Select` cannot travel in a plain form submission.
 - Nothing to show is an `EmptyState`; an unreachable API is `ApiUnavailable`; a loading view is a skeleton from `src/components/skeletons.tsx` shaped like the loaded page.
-- Status and Severity always render through `StatusBadge` and `SeverityBadge`. Their colours and the labels in `src/lib/domain.ts` are the only place an enum becomes something visible; a new enum value is added to both, and the type check enforces it.
+- A person is an `Avatar` beside their name. A headline count is a tile in `Overview`, built from `overviewTiles` in `src/lib/overview.ts`.
+- Status and Severity always render through `StatusBadge` (a tinted pill with a dot) and `SeverityBadge` (four bars and the word). Their colours and the labels in `src/lib/domain.ts` are the only place an enum becomes something visible; a new enum value is added to both, and the type check enforces it.
 - Timestamps render through `LocalTime`: UTC from the server, the viewer's zone after hydration, with the ISO value in `title`.
 - Combine classes with `cn(...)`.
 
