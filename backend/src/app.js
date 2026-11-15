@@ -158,11 +158,29 @@ function createApp({ dbFile, uploadsDir, now = () => new Date().toISOString() })
 
   // The list is served by json-server (filtering, sorting, paging, full-text q).
   // Hide the stored photo file names by rewriting the response.
-  router.render = (req, res) => {
+  const renderIncidents = (req, res) => {
     const data = res.locals.data;
     const map = (row) => (row && Array.isArray(row.photos) ? toIncident(req, row) : row);
     res.jsonp(Array.isArray(data) ? data.map(map) : map(data));
   };
+  router.render = renderIncidents;
+
+  // `assigned` cannot go to json-server: it cannot match null, and it would drop an unknown
+  // key without a trace. Filter here, before json-server counts and pages, by handing the
+  // matching rows to a request-scoped json-server router.
+  const isAssigned = (row) => row.assignee !== null && row.assignee !== undefined;
+  app.get('/incidents', wrap((req, res, next) => {
+    const { assigned } = req.query;
+    if (assigned === undefined) return next();
+    if (assigned !== 'true' && assigned !== 'false') {
+      throw new ApiError(422, 'VALIDATION_ERROR', 'assigned must be exactly true or false, given once');
+    }
+    delete req.query.assigned;
+    const rows = incidents().value().filter((row) => isAssigned(row) === (assigned === 'true'));
+    const scoped = jsonServer.router({ incidents: rows });
+    scoped.render = renderIncidents;
+    scoped(req, res, next);
+  }));
 
   app.post('/incidents', wrap((req, res) => {
     if (req.user.role !== 'TECHNICIAN') {

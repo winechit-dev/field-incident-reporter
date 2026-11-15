@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, PAGE_SIZE, pageCount, parseFilters, toApiQuery, toSearchParams } from "./filters";
+import {
+  DEFAULT_FILTERS, PAGE_SIZE, UNASSIGNED_OPTION, hasActiveFilters, pageCount, parseFilters, toApiQuery, toSearchParams,
+} from "./filters";
 
 describe("parseFilters", () => {
   it("returns the defaults for an empty URL", () => {
@@ -77,5 +79,59 @@ describe("pageCount", () => {
     expect(pageCount(0)).toBe(1);
     expect(pageCount(PAGE_SIZE)).toBe(1);
     expect(pageCount(PAGE_SIZE + 1)).toBe(2);
+  });
+});
+
+describe("Unassigned filter", () => {
+  it("is read from assigned=false in the URL (criterion 9)", () => {
+    expect(parseFilters({ assigned: "false" }).unassigned).toBe(true);
+    expect(toApiQuery(parseFilters({ assigned: "false" })).assigned).toBe(false);
+  });
+
+  it("is written back as assigned=false and survives a round trip (criterion 9)", () => {
+    const f = parseFilters({ assigned: "false", severity: "HIGH", page: "2" });
+    expect(toSearchParams(f).get("assigned")).toBe("false");
+    expect(parseFilters(Object.fromEntries(toSearchParams(f)))).toEqual(f);
+  });
+
+  it("is read from the assignee dropdown's Unassigned option, which no user id can equal (criterion 9)", () => {
+    expect(/^[A-Za-z0-9-]{1,64}$/.test(UNASSIGNED_OPTION)).toBe(false);
+    const f = parseFilters({ assignee: UNASSIGNED_OPTION });
+    expect(f.unassigned).toBe(true);
+    expect(f.assignee).toBeUndefined();
+    expect(toSearchParams(f).toString()).toBe("assigned=false");
+  });
+
+  it("is mutually exclusive with an assignee (criterion 10)", () => {
+    const f = parseFilters({ assigned: "false", assignee: "u-op-1" });
+    expect(f.unassigned).toBe(true);
+    expect(f.assignee).toBeUndefined();
+    const q = toApiQuery(f);
+    expect(q.assigned).toBe(false);
+    expect(q.assignee).toBeUndefined();
+    expect(toSearchParams(f).has("assignee")).toBe(false);
+  });
+
+  it("never sends both even if built by hand (criterion 10)", () => {
+    const q = toApiQuery({ ...DEFAULT_FILTERS, unassigned: true, assignee: "u-op-1" });
+    expect(q.assigned === false && q.assignee === undefined).toBe(true);
+  });
+
+  it("sends no assigned parameter when off (criterion 10)", () => {
+    expect(toApiQuery(parseFilters({ assignee: "u-op-1" }))).toMatchObject({ assigned: undefined, assignee: "u-op-1" });
+  });
+
+  it("ignores invalid values (criterion 11)", () => {
+    for (const bad of ["true", "maybe", "", "1", "FALSE"]) {
+      const f = parseFilters({ assigned: bad });
+      expect(f.unassigned).toBeUndefined();
+      expect(toApiQuery(f).assigned).toBeUndefined();
+    }
+    expect(parseFilters({ assigned: ["false", "true"] }).unassigned).toBe(true);
+  });
+
+  it("counts as an active filter (criterion 11)", () => {
+    expect(hasActiveFilters(parseFilters({ assigned: "false" }))).toBe(true);
+    expect(hasActiveFilters(parseFilters({ assigned: "maybe" }))).toBe(false);
   });
 });

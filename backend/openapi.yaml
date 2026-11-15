@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Field Incident Reporter API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     Mock API shared by the Android/iOS app (Technicians) and the web dashboard (Operators).
 
@@ -47,12 +47,20 @@ paths:
       description: |
         Served by json-server. Equality filters take any top-level field. For example
         `?status=OPEN&severity=HIGH&reportedBy=u-tech-1`. Technician apps pass their own id as `reportedBy`.
+
+        `assigned` filters on whether an Incident has an assignee at all: `assigned=false` returns only
+        Incidents whose `assignee` is `null`; `assigned=true` only those with an assignee. Leaving it out
+        does not filter on assignee. All filters combine with AND, so `assigned=false&assignee=u-op-1`
+        matches nothing (`200` with an empty array), and `assigned=true&assignee=u-op-1` is the same as
+        `assignee=u-op-1`. Sorting, paging and `X-Total-Count` apply to the rows left after every filter,
+        `assigned` included.
       parameters:
         - { name: status, in: query, schema: { $ref: '#/components/schemas/Status' } }
         - { name: severity, in: query, schema: { $ref: '#/components/schemas/Severity' } }
         - { name: category, in: query, schema: { $ref: '#/components/schemas/Category' } }
         - { name: reportedBy, in: query, schema: { type: string } }
-        - { name: assignee, in: query, schema: { type: string } }
+        - { name: assignee, in: query, description: An Operator user id. Matches Incidents assigned to that Operator., schema: { type: string } }
+        - { name: assigned, in: query, description: '`false` for unassigned Incidents (`assignee` is `null`), `true` for assigned ones. Any other value, or the parameter given more than once, is `422 VALIDATION_ERROR`.', schema: { type: boolean } }
         - { name: q, in: query, description: Full-text search, schema: { type: string } }
         - { name: createdAt_gte, in: query, description: Created on or after (ISO 8601), schema: { type: string, format: date-time } }
         - { name: createdAt_lte, in: query, description: Created on or before (ISO 8601), schema: { type: string, format: date-time } }
@@ -64,11 +72,12 @@ paths:
         '200':
           description: Incidents
           headers:
-            X-Total-Count: { description: Total matches when `_page`/`_limit` is used, schema: { type: integer } }
+            X-Total-Count: { description: 'Total matches across every filter (including `assigned`) when `_page`/`_limit` is used, not just the rows on this page', schema: { type: integer } }
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/Incident' } }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '422': { description: 'Invalid query: `assigned` is not exactly `true` or `false`, or is repeated (`VALIDATION_ERROR`)', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     post:
       tags: [Incidents]
       summary: Report an Incident (Technician)

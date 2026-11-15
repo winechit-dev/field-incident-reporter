@@ -100,7 +100,7 @@ For iOS, open `mobile/iosApp` in Xcode. See [Status](#status) for what works the
 - **Report an incident:** title, description, category, severity, location (GPS or an address) and one to five photos, compressed on the device before upload.
 - **View, edit, delete:** a technician can change or delete an incident only while it is *Open*. Deleting has a confirmation and a five-second undo.
 - **Works offline:** every change is saved on the device first and synced later, with retry and backoff.
-- **Triage:** operators filter and search incidents, open one, assign it, move it through *Open → In progress → Resolved*, and record how it was resolved.
+- **Triage:** operators filter and search incidents (including the unassigned ones), open one, assign it, move it through *Open → In progress → Resolved*, and record how it was resolved.
 
 ## How it is built
 
@@ -128,8 +128,8 @@ Domain terms (Incident, Technician, Operator, Sync State, Conflict) are defined 
 Each command runs from the repository root.
 
 ```
-cd backend && npm test                                  # 13 API tests
-cd admin && npm run typecheck && npm run lint && npm test && npm run build   # 27 tests
+cd backend && npm test                                  # 21 API tests
+cd admin && npm run typecheck && npm run lint && npm test && npm run build   # 35 tests
 cd mobile && ./gradlew :core:domain:allTests :core:data:testAndroidHostTest \
   :core:data:iosSimulatorArm64Test :feature:incidents:testAndroidHostTest :shared:iosSimulatorArm64Test
 scripts/integration/run-integration.sh                    # the five cross-app scenarios against a real API
@@ -342,6 +342,6 @@ Only mobile has a debugging skill. For backend and admin, describe the failing r
 | Android app | Report, view, edit, delete, offline sync, camera and gallery, location, WorkManager sync. Run on an emulator. |
 | Dashboard | Sign-in, filterable list, detail page, triage actions. Run in a browser. |
 | iOS app | Shares all screens and logic with Android. Checked in the simulator: sign-in, location (with the permission prompt), gallery photo with compression, reporting, offline retry with backoff, pull-to-refresh, edit, and delete with undo ([`docs/handoffs/004-ios-verification.md`](docs/handoffs/004-ios-verification.md)). **Not verified:** a real camera capture (the simulator's camera takes no photo) and the background tasks (iOS does not run them in the simulator). |
-| Not built | A demo video, automated checks of what the screens show or of real devices (the cross-app logic is covered: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)), filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
+| Not built | A demo video, automated checks of what the screens show or of real devices (the cross-app logic is covered: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)) and real authentication (the API trusts an `X-User-Id` header). |
 
 Smaller deviations from the original plan: the camera uses the system camera app instead of CameraX, and there is no map pin for adjusting a location.

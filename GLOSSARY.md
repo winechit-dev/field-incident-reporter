@@ -25,7 +25,7 @@ How urgent an Incident is: Low, Medium, High or Critical. Set by the Technician 
 Where an Incident is in its lifecycle: Open, In Progress or Resolved. Only an Operator changes it.
 
 **Assignee**:
-The Operator responsible for an Incident.
+The Operator responsible for an Incident. An Incident with no Assignee is Unassigned; new Incidents start Unassigned.
 
 **Resolution Note**:
 The Operator's explanation of how an Incident was resolved.

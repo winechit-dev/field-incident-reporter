@@ -22,6 +22,8 @@ export interface Filters {
   category?: Category;
   /** An Operator's user id. */
   assignee?: string;
+  /** Only Incidents with no assignee. Exclusive with `assignee`; `true` or absent, never `false`. */
+  unassigned?: true;
   /** Free-text search. */
   q?: string;
   /** First day to include, `YYYY-MM-DD`, UTC. */
@@ -34,6 +36,12 @@ export interface Filters {
 }
 
 export const DEFAULT_FILTERS: Filters = { sort: "createdAt", order: "desc", page: 1 };
+
+/**
+ * The value the assignee dropdown submits for "Unassigned". It cannot be a user id (ids are
+ * `[A-Za-z0-9-]`), so it never collides with one. The canonical URL form is `assigned=false`.
+ */
+export const UNASSIGNED_OPTION = "@unassigned";
 
 type RawParams = Record<string, string | string[] | undefined>;
 
@@ -53,13 +61,16 @@ function validDay(value: string | undefined): string | undefined {
 /** Read filters from the URL. Anything invalid is ignored, so a hand-edited URL never breaks the page. */
 export function parseFilters(params: RawParams): Filters {
   const q = first(params.q)?.trim().slice(0, MAX_QUERY_LENGTH);
-  const assignee = first(params.assignee);
+  const rawAssignee = first(params.assignee);
+  const unassigned = first(params.assigned) === "false" || rawAssignee === UNASSIGNED_OPTION;
+  const assignee = unassigned ? undefined : rawAssignee;
   const page = Number.parseInt(first(params.page) ?? "", 10);
   return {
     status: oneOf(STATUSES, first(params.status)),
     severity: oneOf(SEVERITIES, first(params.severity)),
     category: oneOf(CATEGORIES, first(params.category)),
     assignee: assignee && /^[A-Za-z0-9-]{1,64}$/.test(assignee) ? assignee : undefined,
+    unassigned: unassigned ? true : undefined,
     q: q || undefined,
     from: validDay(first(params.from)),
     to: validDay(first(params.to)),
@@ -75,7 +86,8 @@ export function toApiQuery(f: Filters) {
     status: f.status,
     severity: f.severity,
     category: f.category,
-    assignee: f.assignee,
+    assignee: f.unassigned ? undefined : f.assignee,
+    assigned: f.unassigned ? (false as const) : undefined,
     q: f.q,
     createdAt_gte: f.from ? `${f.from}T00:00:00.000Z` : undefined,
     createdAt_lte: f.to ? `${f.to}T23:59:59.999Z` : undefined,
@@ -93,7 +105,8 @@ export function toSearchParams(f: Filters): URLSearchParams {
   set("status", f.status);
   set("severity", f.severity);
   set("category", f.category);
-  set("assignee", f.assignee);
+  if (f.unassigned) params.set("assigned", "false");
+  else set("assignee", f.assignee);
   set("q", f.q);
   set("from", f.from);
   set("to", f.to);
@@ -104,7 +117,7 @@ export function toSearchParams(f: Filters): URLSearchParams {
 }
 
 export function hasActiveFilters(f: Filters): boolean {
-  return Boolean(f.status || f.severity || f.category || f.assignee || f.q || f.from || f.to);
+  return Boolean(f.status || f.severity || f.category || f.assignee || f.unassigned || f.q || f.from || f.to);
 }
 
 export function pageCount(total: number): number {

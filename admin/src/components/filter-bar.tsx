@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import {
   CATEGORIES, CATEGORY_LABEL, SEVERITIES, SEVERITY_LABEL, STATUSES, STATUS_LABEL, type User,
 } from "@/lib/domain";
-import { hasActiveFilters, type Filters } from "@/lib/filters";
+import { UNASSIGNED_OPTION, hasActiveFilters, type Filters } from "@/lib/filters";
 import Link from "next/link";
 
 const selectClass =
@@ -47,8 +47,9 @@ export function FilterBar({ filters, operators }: { filters: Filters; operators:
         </select>
       </Field>
       <Field label="Assignee">
-        <select name="assignee" defaultValue={filters.assignee ?? ""} className={selectClass}>
+        <select name="assignee" defaultValue={filters.unassigned ? UNASSIGNED_OPTION : (filters.assignee ?? "")} className={selectClass}>
           <option value="">Anyone</option>
+          <option value={UNASSIGNED_OPTION}>Unassigned</option>
           {operators.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </Field>

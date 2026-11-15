@@ -28,7 +28,7 @@ Start the mock API first (`backend/`, `npm start`), then the dashboard. Pick an 
 
 ## Behaviour
 
-- Filters (search, Status, Severity, Category, assignee, reported date range, sort, page) live in the URL as a plain GET form. Invalid values in the URL are ignored.
+- Filters (search, Status, Severity, Category, assignee or Unassigned, reported date range, sort, page) live in the URL as a plain GET form. Invalid values in the URL are ignored. Unassigned is `assigned=false` in the URL (the dropdown submits a reserved value that is read as the same thing, and links the page builds use `assigned=false`); it excludes a specific assignee.
 - Dates are whole days in UTC. Times display in the browser's local zone.
 - The API's `X-Total-Count` header drives paging (20 per page).
 
@@ -38,4 +38,4 @@ The detail page (`/incidents/[id]`) shows everything about an Incident and has a
 
 ## Not built yet
 
-Filtering for unassigned Incidents (the contract cannot express it), and bulk actions.
+Bulk actions.

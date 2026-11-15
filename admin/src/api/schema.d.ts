@@ -54,6 +54,13 @@ export interface paths {
          * List Incidents
          * @description Served by json-server. Equality filters take any top-level field. For example
          *     `?status=OPEN&severity=HIGH&reportedBy=u-tech-1`. Technician apps pass their own id as `reportedBy`.
+         *
+         *     `assigned` filters on whether an Incident has an assignee at all: `assigned=false` returns only
+         *     Incidents whose `assignee` is `null`; `assigned=true` only those with an assignee. Leaving it out
+         *     does not filter on assignee. All filters combine with AND, so `assigned=false&assignee=u-op-1`
+         *     matches nothing (`200` with an empty array), and `assigned=true&assignee=u-op-1` is the same as
+         *     `assignee=u-op-1`. Sorting, paging and `X-Total-Count` apply to the rows left after every filter,
+         *     `assigned` included.
          */
         get: {
             parameters: {
@@ -62,7 +69,10 @@ export interface paths {
                     severity?: components["schemas"]["Severity"];
                     category?: components["schemas"]["Category"];
                     reportedBy?: string;
+                    /** @description An Operator user id. Matches Incidents assigned to that Operator. */
                     assignee?: string;
+                    /** @description `false` for unassigned Incidents (`assignee` is `null`), `true` for assigned ones. Any other value, or the parameter given more than once, is `422 VALIDATION_ERROR`. */
+                    assigned?: boolean;
                     /** @description Full-text search */
                     q?: string;
                     /** @description Created on or after (ISO 8601) */
@@ -84,7 +94,7 @@ export interface paths {
                 /** @description Incidents */
                 200: {
                     headers: {
-                        /** @description Total matches when `_page`/`_limit` is used */
+                        /** @description Total matches across every filter (including `assigned`) when `_page`/`_limit` is used, not just the rows on this page */
                         "X-Total-Count"?: number;
                         [name: string]: unknown;
                     };
@@ -93,6 +103,15 @@ export interface paths {
                     };
                 };
                 401: components["responses"]["Unauthenticated"];
+                /** @description Invalid query: `assigned` is not exactly `true` or `false`, or is repeated (`VALIDATION_ERROR`) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         put?: never;

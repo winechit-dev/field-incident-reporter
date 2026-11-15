@@ -170,3 +170,116 @@ test('unsupported writes are rejected', async () => {
   assert.equal((await call('POST', '/users', OP, { name: 'x' })).status, 405);
   assert.equal((await call('PUT', '/incidents/abc', OP, {})).status, 405);
 });
+
+// ---- 005 unassigned-filter: GET /incidents?assigned=true|false ----
+// The oracle for every assertion is the unfiltered list (GET /incidents with no query),
+// so these tests hold whatever other tests have created in the shared server.
+const idsOf = (rows) => rows.map((r) => r.id).sort();
+const allIncidents = async () => (await call('GET', '/incidents', OP)).json();
+const SEED_UNASSIGNED_HIGH = '3f1c6c1e-0a54-4e0e-9a43-000000000001';
+const SEED_UNASSIGNED_LOW = '3f1c6c1e-0a54-4e0e-9a43-000000000004';
+
+test('assigned=false returns every Unassigned Incident and nothing else (criterion 1)', async () => {
+  const all = await allIncidents();
+  const expected = idsOf(all.filter((r) => r.assignee === null));
+  const res = await call('GET', '/incidents?assigned=false', OP);
+  assert.equal(res.status, 200);
+  const rows = await res.json();
+  assert.ok(rows.every((r) => r.assignee === null));
+  assert.deepEqual(idsOf(rows), expected);
+  assert.ok(expected.includes(SEED_UNASSIGNED_HIGH) && expected.includes(SEED_UNASSIGNED_LOW));
+});
+
+test('assigned=true returns every assigned Incident and nothing else (criterion 2)', async () => {
+  const all = await allIncidents();
+  const expected = idsOf(all.filter((r) => r.assignee !== null));
+  const res = await call('GET', '/incidents?assigned=true', OP);
+  assert.equal(res.status, 200);
+  const rows = await res.json();
+  assert.ok(rows.length > 0 && rows.every((r) => typeof r.assignee === 'string'));
+  assert.deepEqual(idsOf(rows), expected);
+});
+
+test('assigned=false combines with every other filter by AND (criterion 3)', async () => {
+  const unassigned = idsOf((await allIncidents()).filter((r) => r.assignee === null));
+  const high = await (await call('GET', '/incidents?assigned=false&severity=HIGH', OP)).json();
+  assert.ok(high.every((r) => r.assignee === null && r.severity === 'HIGH'));
+  assert.ok(idsOf(high).includes(SEED_UNASSIGNED_HIGH));
+  const filters = [
+    'severity=HIGH', 'status=OPEN', 'category=EQUIPMENT', 'reportedBy=u-tech-1', 'q=pallet',
+    'createdAt_gte=2026-11-12T00:00:00.000Z', 'createdAt_lte=2026-11-13T23:59:59.999Z',
+  ];
+  for (const f of filters) {
+    const combined = await (await call('GET', `/incidents?assigned=false&${f}`, OP)).json();
+    assert.ok(combined.every((r) => r.assignee === null), f);
+    const single = idsOf(await (await call('GET', `/incidents?${f}`, OP)).json());
+    assert.deepEqual(idsOf(combined), single.filter((id) => unassigned.includes(id)), f);
+  }
+});
+
+test('assigned is applied before paging, counting and sorting (criterion 4)', async () => {
+  const all = await allIncidents();
+  const expected = idsOf(all.filter((r) => r.assignee === null));
+  assert.ok(expected.length >= 2);
+  const first = await call('GET', '/incidents?assigned=false&_page=1&_limit=1', OP);
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('X-Total-Count'), String(expected.length));
+  assert.ok(expected.length < all.length);
+  const seen = [];
+  for (let page = 1; page <= expected.length; page++) {
+    const rows = await (await call('GET', `/incidents?assigned=false&_page=${page}&_limit=1`, OP)).json();
+    assert.equal(rows.length, 1, `page ${page}`);
+    assert.equal(rows[0].assignee, null);
+    seen.push(rows[0].id);
+  }
+  assert.deepEqual(seen.sort(), expected);
+  const sorted = await (await call('GET', '/incidents?assigned=false&_sort=createdAt&_order=desc', OP)).json();
+  assert.deepEqual(idsOf(sorted), expected);
+  const stamps = sorted.map((r) => r.createdAt);
+  assert.deepEqual(stamps, [...stamps].sort().reverse());
+});
+
+test('assigned=false with assignee matches nothing; assigned=true equals assignee (criterion 5)', async () => {
+  const none = await call('GET', `/incidents?assigned=false&assignee=${OP}`, OP);
+  assert.equal(none.status, 200);
+  assert.deepEqual(await none.json(), []);
+  const paged = await call('GET', `/incidents?assigned=false&assignee=${OP}&_page=1&_limit=5`, OP);
+  assert.equal(paged.status, 200);
+  assert.deepEqual(await paged.json(), []);
+  assert.equal(paged.headers.get('X-Total-Count'), '0');
+  const byOperator = idsOf(await (await call('GET', `/incidents?assignee=${OP}`, OP)).json());
+  const trueAndOperator = idsOf(await (await call('GET', `/incidents?assigned=true&assignee=${OP}`, OP)).json());
+  assert.ok(byOperator.includes('3f1c6c1e-0a54-4e0e-9a43-000000000002'));
+  assert.deepEqual(trueAndOperator, byOperator);
+});
+
+test('assigned must be exactly true or false, given once (criterion 6)', async () => {
+  for (const q of ['assigned=maybe', 'assigned=', 'assigned=1', 'assigned=TRUE', 'assigned=false&assigned=true']) {
+    for (const user of [TECH, OP]) {
+      const res = await call('GET', `/incidents?${q}`, user);
+      assert.equal(res.status, 422, q);
+      assert.equal((await res.json()).error.code, 'VALIDATION_ERROR', q);
+    }
+  }
+});
+
+test('identity is checked before the assigned query (criterion 7)', async () => {
+  for (const q of ['assigned=false', 'assigned=maybe']) {
+    const res = await call('GET', `/incidents?${q}`);
+    assert.equal(res.status, 401, q);
+    assert.equal((await res.json()).error.code, 'UNAUTHENTICATED', q);
+  }
+  assert.equal((await call('GET', '/incidents?assigned=false', 'nobody')).status, 401);
+});
+
+test('requests without assigned are unchanged, including the mobile list (criterion 8)', async () => {
+  const all = await allIncidents();
+  const res = await call('GET', `/incidents?reportedBy=${TECH}&_sort=createdAt&_order=desc`, TECH);
+  assert.equal(res.status, 200);
+  const rows = await res.json();
+  assert.deepEqual(idsOf(rows), idsOf(all.filter((r) => r.reportedBy === TECH)));
+  const stamps = rows.map((r) => r.createdAt);
+  assert.deepEqual(stamps, [...stamps].sort().reverse());
+  const high = await (await call('GET', '/incidents?severity=HIGH', OP)).json();
+  assert.deepEqual(idsOf(high), idsOf(all.filter((r) => r.severity === 'HIGH')));
+});
