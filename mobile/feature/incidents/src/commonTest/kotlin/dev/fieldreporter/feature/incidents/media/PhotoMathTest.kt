@@ -1,7 +1,7 @@
-package dev.fieldreporter.platform
+package dev.fieldreporter.feature.incidents.media
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class PhotoMathTest {
     @Test
@@ -18,6 +18,11 @@ class PhotoMathTest {
     @Test
     fun extremeAspectRatioKeepsAtLeastOnePixel() {
         assertEquals(1600 to 1, PhotoMath.scaledSize(100_000, 10, 1600))
+    }
+
+    @Test
+    fun defaultsToTheSharedMaxEdge() {
+        assertEquals(PhotoMath.MAX_EDGE to 1200, PhotoMath.scaledSize(4000, 3000))
     }
 
     @Test

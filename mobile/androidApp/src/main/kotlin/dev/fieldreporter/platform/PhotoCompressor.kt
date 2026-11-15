@@ -6,32 +6,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import dev.fieldreporter.feature.incidents.media.PhotoMath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.UUID
-import kotlin.math.max
-import kotlin.math.roundToInt
-
-/** The sizing rules, kept apart from Android so they can be unit tested. */
-object PhotoMath {
-    /** Scale so the longer edge is at most [maxEdge], keeping the aspect ratio. Never enlarges. */
-    fun scaledSize(width: Int, height: Int, maxEdge: Int): Pair<Int, Int> {
-        val longest = max(width, height)
-        if (longest <= maxEdge) return width to height
-        val factor = maxEdge.toFloat() / longest
-        return max(1, (width * factor).roundToInt()) to max(1, (height * factor).roundToInt())
-    }
-
-    /** The largest power-of-two decode shrink that still leaves the image at least [maxEdge] on its long edge. */
-    fun sampleSize(width: Int, height: Int, maxEdge: Int): Int {
-        var sample = 1
-        val longest = max(width, height)
-        while (longest / (sample * 2) >= maxEdge) sample *= 2
-        return sample
-    }
-}
 
 /**
  * Shrinks a photo to a JPEG that is cheap to upload on a poor connection, and bakes in the EXIF
@@ -40,7 +20,7 @@ object PhotoMath {
  */
 class PhotoCompressor(
     private val context: Context,
-    private val maxEdge: Int = 1600,
+    private val maxEdge: Int = PhotoMath.MAX_EDGE,
     private val quality: Int = 80,
 ) {
     /** @return the absolute path of the compressed JPEG. @throws IOException if the image can't be read. */
