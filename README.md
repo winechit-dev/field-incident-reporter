@@ -1,14 +1,58 @@
 # Field Incident Reporter
 
-Field technicians photograph and report physical incidents (broken equipment, road hazards) from a phone, even with no signal. Operators triage them on a web dashboard.
+Field Technicians photograph and report physical incidents (broken equipment, road hazards) from a phone, even with no signal. Operators triage them on a web dashboard.
 
-This is a monorepo with three parts that share one API contract:
+This is a monorepo with three apps that share one API contract:
 
-| Part | Path | Stack |
-| --- | --- | --- |
-| Mobile app (Android, iOS) | [`mobile/`](mobile) | Kotlin Multiplatform, Compose Multiplatform, Room, Ktor |
-| Mock API | [`backend/`](backend) | json-server plus an Express rules layer |
-| Operator dashboard | [`admin/`](admin) | Next.js (App Router), TypeScript, Tailwind, shadcn/ui |
+| App | Path | Used by | Runs on |
+| --- | --- | --- | --- |
+| Mobile app | [`mobile/`](mobile) | Technicians | Android and iOS |
+| Mock API | [`backend/`](backend) | both clients | Node, port 3000 |
+| Operator dashboard | [`admin/`](admin) | Operators | Browser, port 3001 |
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Project structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Getting started](#getting-started)
+- [Configuration](#configuration)
+- [API and platform integration](#api-and-platform-integration)
+- [Testing and quality](#testing-and-quality)
+- [Development guidelines](#development-guidelines)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [Status and known limits](#status-and-known-limits)
+- [More documentation](#more-documentation)
+
+## What it does
+
+- **Report an Incident:** title, description, Category, Severity, location (GPS or an address) and one to five photos, compressed on the device before upload.
+- **View, edit, delete:** a Technician can change or delete an Incident only while it is *Open*. Deleting has a confirmation and a five-second undo.
+- **Work offline:** every change is saved on the device first and synced later, with retry and backoff.
+- **Triage:** Operators filter and search Incidents (including the unassigned ones), open one, assign it, move it through *Open → In progress → Resolved*, and record how it was resolved.
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/android-list.png" width="170" alt="Incident list on the phone"><br><sub>The Technician's list</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-report.png" width="170" alt="Report form with category, severity, GPS location and a photo"><br><sub>Reporting, with GPS and a photo</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-detail.png" width="170" alt="Incident detail with a photo"><br><sub>Detail</sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-offline.png" width="170" alt="List with an incident marked Waiting to sync"><br><sub>Edited offline: <em>Waiting to sync</em></sub></td>
+    <td align="center" valign="top"><img src="docs/screenshots/android-refreshed.png" width="170" alt="List after the operator started work"><br><sub>Back online: the Operator's <em>In progress</em></sub></td>
+  </tr>
+</table>
+
+![Dashboard incident list](docs/screenshots/admin-list.png)
+*The Operator dashboard. Filters live in the URL.*
+
+![Dashboard incident detail with triage actions](docs/screenshots/admin-detail.png)
+*Triage from the detail page: Status, assignee, Resolution Note, photos and the Activity Log.*
+
+The photos in these screenshots are a drawn placeholder, not a real site photo. More screens, including dark mode: [`docs/screenshots/`](docs/screenshots).
+
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -23,325 +67,388 @@ flowchart LR
     Dash -. "types generated from" .-> Spec
 ```
 
-## Contents
+Three decisions shape the code:
 
-- [Screenshots](#screenshots)
-- [Run it](#run-it)
-- [What it does](#what-it-does)
-- [How it is built](#how-it-is-built)
-- [Tests](#tests)
-- [Working with AI agents](#working-with-ai-agents): [agents](#agents), [skills](#skills), [using it](#using-it), [troubleshooting](#troubleshooting)
-- [Status](#status)
+1. **Contract first.** [`backend/openapi.yaml`](backend/openapi.yaml) is the source of truth for every request, response and error. The dashboard's API types are generated from it, the mobile DTOs follow it by hand, and the backend has a test for each documented status code.
+2. **Offline-first, and the server wins a Conflict.** On the phone, Room is the source of truth. Every change is saved locally and queued in an outbox, which a sync engine pushes in order. Creating an Incident is idempotent by a client-generated UUID, so a retry never duplicates. If an Operator has already picked up an Incident when a Technician's offline edit arrives, the server answers `409`, the edit is discarded, and the Incident shows the server's version marked *Sync failed*. Reasoning: [ADR 0002](docs/adr/0002-offline-first-sync-server-wins.md).
+3. **One shared UI on two platforms.** Android and iOS share the screens, view models, data and sync code through Kotlin Multiplatform and Compose Multiplatform. Camera, location, photo compression and background sync sit behind small interfaces with native implementations. Reasoning: [ADR 0001](docs/adr/0001-shared-compose-multiplatform-ui.md).
 
-## Screenshots
+## Technology stack
 
-**The phone app (Android).** A technician reports an incident with a photo and GPS location, edits one while offline, and later sees the operator's progress.
+| Area | Technology | Used for |
+| --- | --- | --- |
+| Mobile | Kotlin 2.4, Kotlin Multiplatform | One codebase for Android and iOS |
+| | Compose Multiplatform, Material 3 | Shared screens |
+| | Room (bundled SQLite) | Local database: Incidents and the outbox |
+| | Ktor client | HTTP (OkHttp on Android, Darwin on iOS) |
+| | Koin | Dependency injection |
+| | WorkManager, Play Services Location (Android) | Background sync, GPS |
+| | Coil | Loading photos |
+| | Gradle 9.5 (wrapper), AGP 9.1 | Build |
+| Backend | Node, Express, json-server 0.17 | Mock API: json-server serves reads, an Express layer enforces the rules |
+| | multer | Photo uploads |
+| | `node:test` | API tests |
+| Admin | Next.js 16 (App Router), React 19, TypeScript | Dashboard |
+| | Tailwind CSS 4, shadcn/ui | Styling and components |
+| | `openapi-typescript`, `openapi-fetch` | API types and client generated from the contract |
+| | Vitest, ESLint | Tests and linting |
+| Contract | OpenAPI 3.0 | The API definition all three apps follow |
 
-<table>
-  <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/android-list.png" width="180" alt="Incident list on the phone"><br><sub>The list. The incident just reported from the phone is at the top, already synced.</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-report.png" width="180" alt="Report form with category, severity, GPS location and a photo"><br><sub>Reporting: category, severity, GPS location and a compressed photo.</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-detail.png" width="180" alt="Incident detail with a photo"><br><sub>Detail, with the photo loaded from the server.</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-offline.png" width="180" alt="List with an incident marked Waiting to sync"><br><sub>Edited with no network: saved on the device, <em>Waiting to sync</em>.</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-refreshed.png" width="180" alt="List after the operator started work"><br><sub>Back online and refreshed: the operator's <em>In progress</em>, and the offline edit has synced.</sub></td>
-  </tr>
-</table>
+Exact versions: [`mobile/gradle/libs.versions.toml`](mobile/gradle/libs.versions.toml), [`backend/package.json`](backend/package.json), [`admin/package.json`](admin/package.json).
 
-**The operator dashboard.** Filters live in the URL, and an operator triages from the detail page.
-
-![Dashboard incident list](docs/screenshots/admin-list.png)
-*All incidents, including the one reported from the phone above.*
-
-![Dashboard list filtered to Critical severity](docs/screenshots/admin-filtered.png)
-*Filtering by severity.*
-
-![Dashboard incident detail with triage actions](docs/screenshots/admin-detail.png)
-*An incident that was started and resolved from the dashboard: resolution note, photo and activity log.*
-
-The photos in these screenshots are a drawn placeholder, not a real site photo.
-
-## Run it
-
-You need Node and a JDK (developed with Node 26 and JDK 21). For Android, the Android SDK and an emulator; for iOS, Xcode.
-
-**1. The API** (port 3000)
+## Project structure
 
 ```
+field-incident-reporter/
+├── backend/                  Mock API
+│   ├── openapi.yaml          The API contract (source of truth)
+│   ├── src/app.js            Every endpoint and rule
+│   ├── src/server.js         Entry point; reset.js restores the seed data
+│   ├── seed.json             Demo data: four users, one Incident per Status
+│   ├── test/api.test.js      API tests
+│   └── uploads/              Uploaded photos (git-ignored)
+├── admin/                    Operator dashboard (Next.js)
+│   └── src/
+│       ├── api/              Typed API client; schema.d.ts is generated
+│       ├── app/              Routes: /sign-in, /incidents, /incidents/[id]
+│       ├── components/       App components; ui/ holds shadcn/ui primitives
+│       ├── lib/              Pure logic (filters, triage, overview) and its tests
+│       ├── integration/      Tests that run against a real API (*.itest.ts)
+│       └── proxy.ts          Redirects to sign-in when no Operator is chosen
+├── mobile/                   Kotlin Multiplatform app
+│   ├── core/domain/          Models, rules, repository interfaces (pure Kotlin)
+│   ├── core/data/            Room, Ktor client, sync engine, repositories
+│   ├── feature/incidents/    Shared Compose screens and view models
+│   ├── shared/               Builds the iOS framework; iOS platform code
+│   ├── androidApp/           Android entry point and platform code
+│   ├── iosApp/               Xcode project that hosts the shared framework
+│   └── gradle/libs.versions.toml   All dependency versions
+├── docs/
+│   ├── adr/                  Architecture decision records
+│   ├── agents/               Development process: lifecycle, gates, standards
+│   ├── design/               Design system shared by the app and the dashboard
+│   ├── handoffs/             One file per feature: criteria, status, evidence
+│   └── screenshots/
+├── scripts/
+│   ├── integration/run-integration.sh   Cross-app scenarios against a real API
+│   ├── check-forbidden-terms.sh         Required before every handoff
+│   └── check-agents.sh                  Checks the AI-agent workflow files
+├── .claude/                  AI agent definitions, skills and commands
+├── AGENTS.md                 Project rules for AI agents (CLAUDE.md points here)
+└── GLOSSARY.md               Domain terms
+```
+
+Mobile module dependencies point inward:
+
+| Module | Holds | May depend on |
+| --- | --- | --- |
+| `:core:domain` | models, rules, repository and scheduler interfaces | coroutines only |
+| `:core:data` | Room, Ktor, `SyncEngine`, repositories, DTOs | `:core:domain` |
+| `:feature:incidents` | screens, view models, `PlatformCapabilities` | `:core:domain` |
+| `:shared` | the iOS framework and iOS platform code | all of the above |
+| `:androidApp`, `iosApp` | entry points, platform implementations, DI start-up | all |
+
+Each app has its own README with more detail: [`backend/README.md`](backend/README.md), [`admin/README.md`](admin/README.md), [`mobile/README.md`](mobile/README.md).
+
+## Prerequisites
+
+| Tool | Version | Needed for |
+| --- | --- | --- |
+| Node.js | 22.12 or later, 24, or 26 (developed with 26) | Backend and dashboard |
+| JDK | 21 (developed with 21) | Mobile build |
+| Android Studio with the Android SDK | SDK platform 37; the app runs on Android 7.0 (API 24) and later | Android app |
+| Android emulator or device | | Running the Android app |
+| Xcode | Developed with 26.2, on an Apple silicon Mac | iOS app (optional) |
+| `curl`, `bash` | | The integration script |
+| Python 3, Ruby | | Optional: `scripts/check-agents.sh` and the contract parse check |
+
+You can run the backend and dashboard with Node alone. The mobile toolchain is only needed for the app.
+
+## Getting started
+
+```bash
+git clone https://github.com/winechit-dev/field-incident-reporter.git
+cd field-incident-reporter
+```
+
+Start the three apps in this order, each in its own terminal.
+
+### 1. The API (port 3000)
+
+```bash
 cd backend
 npm install
-npm start          # npm run reset restores the seed data
+npm start
 ```
 
-**2. The dashboard** (port 3001)
+Check it: `curl http://localhost:3000/users` lists the four seeded users. The data lives in `backend/db.json`, created from `seed.json` on first start. To go back to the seed data and clear uploaded photos, stop the server, run `npm run reset`, and start it again.
 
-```
+### 2. The dashboard (port 3001)
+
+```bash
 cd admin
 npm install
 npm run dev
 ```
 
-Choose an Operator on the sign-in page (Mya Sandar or Htet Naing). There is no password.
+Open <http://localhost:3001> and choose an Operator on the sign-in page (Mya Sandar or Htet Naing). There is no password. No `.env` file is needed for the default setup; see [Configuration](#configuration).
 
-**3. The Android app**
+### 3. The Android app
 
-Open `mobile/` in Android Studio and run `androidApp`, or `cd mobile && ./gradlew :androidApp:installDebug`. The emulator reaches the API at `http://10.0.2.2:3000`. Choose a Technician (Aung Kyaw or Thiri Win) on the first screen.
+Start an emulator first, then either open `mobile/` in Android Studio and run `androidApp`, or:
 
-For iOS, open `mobile/iosApp` in Xcode. See [Status](#status) for what works there.
+```bash
+cd mobile
+./gradlew :androidApp:installDebug
+```
 
-**A short tour**
+Open **Field Reporter** on the emulator and choose a Technician (Aung Kyaw or Thiri Win). The emulator reaches the API on your machine at `http://10.0.2.2:3000`.
 
-1. In the app, report an incident with a photo and your location.
+The command line needs to know where the Android SDK is: set `ANDROID_HOME`, or let Android Studio create `mobile/local.properties` by opening the project once.
+
+### 4. The iOS app (optional)
+
+Open `mobile/iosApp/iosApp.xcodeproj` in Xcode, pick an iPhone simulator and run. Xcode builds the shared Kotlin framework through Gradle, so the first build takes a few minutes. The simulator reaches the API at `http://localhost:3000`. See [Status and known limits](#status-and-known-limits) for what has been verified on iOS.
+
+### A short tour
+
+1. In the app, report an Incident with a photo and your location.
 2. Open the dashboard: it appears in the list. Open it, then choose **Start work**.
-3. In the app, pull to refresh: the incident now shows *In progress*.
-4. Turn the emulator's network off, report another incident, and watch it show *Waiting to sync*. Turn the network back on and it syncs by itself.
+3. In the app, pull to refresh: the Incident now shows *In progress*.
+4. Turn the emulator's network off, report another Incident, and watch it show *Waiting to sync*. Turn the network back on and it syncs by itself.
 
-## What it does
+### Production builds
 
-- **Report an incident:** title, description, category, severity, location (GPS or an address) and one to five photos, compressed on the device before upload.
-- **View, edit, delete:** a technician can change or delete an incident only while it is *Open*. Deleting has a confirmation and a five-second undo.
-- **Works offline:** every change is saved on the device first and synced later, with retry and backoff.
-- **Triage:** operators filter and search incidents (including the unassigned ones), open one, assign it, move it through *Open → In progress → Resolved*, and record how it was resolved.
-
-## How it is built
-
-**Contract first.** [`backend/openapi.yaml`](backend/openapi.yaml) is the source of truth. The dashboard's API types are generated from it, and the mobile DTOs follow it. The backend enforces the rules and has a test for each documented status code.
-
-**Offline-first with the server winning conflicts.** Room is the app's source of truth, with an outbox of pending changes that a sync engine pushes in order. Creating an incident is idempotent by a client-generated UUID, so retries never duplicate. If an operator has already picked up an incident when a technician's offline edit reaches the server, the server answers `409`, the edit is discarded, the server's version is shown, and the incident is marked *Sync failed* with the reason.
-
-**One shared UI on two platforms.** The mobile app uses Kotlin Multiplatform with Compose Multiplatform, so Android and iOS share the screens, view models, data and sync code. Camera, location, photo compression and background sync sit behind small interfaces with native implementations.
-
-| Mobile module | Role |
-| --- | --- |
-| `:core:domain` | models, rules, repository interfaces |
-| `:core:data` | Room, Ktor, sync engine, repositories |
-| `:feature:incidents` | screens and view models |
-| `:shared` | builds the iOS framework |
-| `:androidApp`, `iosApp` | app entry points and platform code |
-
-The reasoning behind the two big choices is written down:
-[shared Compose Multiplatform UI](docs/adr/0001-shared-compose-multiplatform-ui.md) and
-[offline-first sync, server wins](docs/adr/0002-offline-first-sync-server-wins.md).
-Domain terms (Incident, Technician, Operator, Sync State, Conflict) are defined in [`GLOSSARY.md`](GLOSSARY.md).
-
-## Tests
-
-Each command runs from the repository root.
-
-```
-cd backend && npm test                                  # 21 API tests
-cd admin && npm run typecheck && npm run lint && npm test && npm run build   # 35 tests
-cd mobile && ./gradlew :core:domain:allTests :core:data:testAndroidHostTest \
-  :core:data:iosSimulatorArm64Test :feature:incidents:testAndroidHostTest :shared:iosSimulatorArm64Test
-scripts/integration/run-integration.sh                    # the five cross-app scenarios against a real API
+```bash
+cd admin && npm run build && npm start        # production dashboard on port 3001
+cd mobile && ./gradlew :androidApp:assembleDebug   # APK in androidApp/build/outputs/apk/debug/
 ```
 
-The mobile tests include the sync state machine (offline create, retry after a lost response, conflict handling, photo ordering), run on both the Android host and the iOS simulator.
+The backend is a mock for local development and has no build step.
 
-## Working with AI agents
+## Configuration
 
-The repo carries a workflow for building it with [Claude Code](https://claude.com/claude-code) agents. Three lanes (backend, mobile, admin) are worked by specialised agents that never touch each other's files and agree through one API contract and one handoff file per feature.
+Everything works with the defaults. All settings are optional.
 
-- [How it fits together](#how-it-fits-together)
-- [Where things are](#where-things-are)
-- [Agents](#agents)
-- [Skills](#skills)
-- [Using it](#using-it)
-- [Good habits](#good-habits)
-- [Troubleshooting](#troubleshooting)
-
-### How it fits together
-
-```mermaid
-flowchart LR
-    Idea([Feature idea]) --> CA[contract-architect]
-    CA -- "handoff file + contract change" --> BI[backend-implementer]
-    BI --> BR[backend-reviewer]
-    CA --> MI[android-implementer]
-    CA --> AI[admin-implementer]
-    MI --> MR[android-reviewer]
-    AI --> AR[admin-reviewer]
-    BR --> IV[integration-verifier]
-    MR --> IV
-    AR --> IV
-    IV --> Done([Done])
-```
-
-Four ideas hold it together:
-
-1. **Contract first.** [`backend/openapi.yaml`](backend/openapi.yaml) changes before any code, and only `contract-architect` edits it.
-2. **One lane, one writer.** An agent writes only inside its own directory. What it needs from another lane goes into the handoff file.
-3. **The handoff file is the conversation.** Each feature has one file in [`docs/handoffs/`](docs/handoffs) holding the acceptance criteria, the contract change, each lane's status and the evidence. Agents read and write it; they do not talk to each other.
-4. **Red first, then gates, then a second pair of eyes.** Every criterion gets a test that fails before the change. A lane is done when its [quality gates](docs/agents/quality-gates.md) are green and a reviewer on a stronger model finds no blockers.
-
-Every feature goes through the same seven steps, described in [`docs/agents/lifecycle.md`](docs/agents/lifecycle.md): plan → contract → implement → verify → review → document → handoff.
-
-### Where things are
-
-| Path | What it holds |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | The project rules every agent starts from. `CLAUDE.md` only points here. |
-| [`backend/AGENTS.md`](backend/AGENTS.md), [`mobile/AGENTS.md`](mobile/AGENTS.md), [`admin/AGENTS.md`](admin/AGENTS.md) | Each lane's boundaries, workflow and skill list. |
-| [`.claude/agents/`](.claude/agents) | The eight agent definitions: tools, model, preloaded skills, steps. |
-| [`.claude/skills/`](.claude/skills) | Eleven skills, one folder each, holding the project knowledge an agent loads for a kind of work. |
-| [`.claude/commands/`](.claude/commands) | The four slash commands that start each step. |
-| [`docs/agents/`](docs/agents) | The shared process: [lifecycle](docs/agents/lifecycle.md), [quality gates](docs/agents/quality-gates.md), [contract changes](docs/agents/contract-change.md), [parallel work](docs/agents/parallel-work.md), [standards](docs/agents/standards.md), and the [agent matrix](docs/agents/agent-matrix.md). |
-| [`docs/handoffs/`](docs/handoffs) | One file per feature, from [`_template.md`](docs/handoffs/_template.md). |
-| [`docs/adr/`](docs/adr), [`GLOSSARY.md`](GLOSSARY.md) | Decisions and domain terms. |
-| [`scripts/`](scripts) | `check-agents.sh` (the workflow files agree), `integration/run-integration.sh` (the lanes agree), `check-forbidden-terms.sh`. |
-
-### Agents
-
-| Agent | Does | Writes | Model |
+| Setting | Where | Default | Purpose |
 | --- | --- | --- | --- |
-| `contract-architect` | Turns an idea into a handoff file with acceptance criteria and changes the contract | `backend/openapi.yaml`, `GLOSSARY.md`, `docs/adr/`, handoff files | `opus` |
-| `backend-implementer` | Endpoints, rules, seed data, API tests | `backend/` | `haiku` |
-| `backend-reviewer` | Reviews a backend diff | nothing | `sonnet` |
-| `android-implementer` | The Kotlin Multiplatform app, Android and iOS | `mobile/` | `sonnet` |
-| `android-reviewer` | Reviews a mobile diff | nothing | `opus` |
-| `admin-implementer` | The Next.js dashboard | `admin/` | `sonnet` |
-| `admin-reviewer` | Reviews an admin diff | nothing | `opus` |
-| `integration-verifier` | Runs each acceptance criterion across the lanes | nothing | `sonnet` |
+| `PORT` | backend, environment variable | `3000` | API port |
+| `DB_FILE` | backend, environment variable | `backend/db.json` | Data file |
+| `API_BASE_URL` | admin, `admin/.env.local` (copy [`.env.example`](admin/.env.example)) | `http://localhost:3000` | Where the dashboard's server finds the API |
+| `INTEGRATION_PORT` | `scripts/integration/run-integration.sh` | `3100` | Port of the throwaway API the script starts |
+| Android API URL | `BASE_URL` in [`FieldReporterApp.kt`](mobile/androidApp/src/main/kotlin/dev/fieldreporter/FieldReporterApp.kt) | `http://10.0.2.2:3000` | Constant in code |
+| iOS API URL | `BASE_URL` in [`IosApp.kt`](mobile/shared/src/iosMain/kotlin/dev/fieldreporter/IosApp.kt) | `http://localhost:3000` | Constant in code |
 
-The model names are Claude Code aliases, set in each agent file. Implementers run on a cheaper model because they produce most of the tokens; each reviewer runs one tier higher so the check does not share the author's blind spots. The reason for each choice, and what every agent takes in and hands on, is in the [agent matrix](docs/agents/agent-matrix.md).
+The mobile API URLs are constants, not build settings. If you move the API to another port, change them too.
 
-There is no separate architect, tester or security agent per lane. `contract-architect` designs across lanes, implementers write their own tests first, and security and UI checks are sections of each review skill.
+## API and platform integration
 
-Agents do not start each other. You, in the main session, run each step with a command, and the handoff file carries the state from one agent to the next.
+Both clients talk to the same REST API and never to each other. A change made on one side reaches the other on its next fetch: the app pulls on sync and pull-to-refresh, the dashboard on page load.
 
-### Skills
+**The full contract is [`backend/openapi.yaml`](backend/openapi.yaml).** Paste it into any OpenAPI viewer to browse it. In short:
 
-A skill is a short document of project knowledge. Two things load one:
-
-- **Preloaded:** an agent's definition lists it, so its full text is in the agent's context from the start.
-- **On demand:** the agent, or you in the main session, loads it when the work matches its description. You can also type its name, for example `/mobile-debugging`.
-
-| Skill | Use it when | Preloaded into |
+| Method and path | Who | Purpose |
 | --- | --- | --- |
-| `backend-api` | Changing a route, a rule, an error code, seed data or an API test | `backend-implementer`, `backend-reviewer` |
-| `backend-review` | Reviewing a backend diff | `backend-reviewer` |
-| `mobile-architecture` | Deciding where code goes; platform code, Koin, coroutines, Gradle | `android-implementer`, `android-reviewer` |
-| `mobile-testing` | Choosing, writing or running a mobile test | `android-implementer` |
-| `mobile-data-sync` | DTOs, Room, the outbox, the sync engine, Ktor | on demand |
-| `mobile-compose-ui` | Screens, view models, navigation, theme, accessibility | on demand |
-| `mobile-debugging` | A build, test or device failure with no obvious cause; a slow screen | on demand |
-| `mobile-review` | Reviewing a mobile diff | `android-reviewer` |
-| `admin-architecture` | Routes, server actions, API calls, filters, forms, session, tests | `admin-implementer`, `admin-reviewer` |
-| `admin-ui` | Components, layout, copy, dark mode, accessibility | on demand |
-| `admin-review` | Reviewing an admin diff | `admin-reviewer` |
+| `GET /users` | anyone (no header needed) | The seeded users, for the "choose who you are" picker |
+| `GET /incidents` | any user | List, with filters, search, sorting and paging |
+| `POST /incidents` | Technician | Report an Incident; idempotent by client-generated `id` |
+| `GET /incidents/{id}` | any user | One Incident |
+| `PATCH /incidents/{id}` | Technician or Operator | Technician edits content while `OPEN`; Operator changes `status`, `assignee`, `resolutionNote` |
+| `DELETE /incidents/{id}` | Technician (reporter, `OPEN` only) | Delete; `204` even if already gone |
+| `POST /incidents/{id}/photos` | Technician (reporter, `OPEN` only) | Upload a JPEG or PNG (10 MB at most, five per Incident) |
+| `DELETE /incidents/{id}/photos/{photoId}` | Technician (reporter, `OPEN` only) | Remove a photo |
+| `GET /uploads/<file>` | anyone | The photo files |
 
-Implementers also check their own diff against their lane's review skill before asking for a review.
+**Identity.** There is no login. Every request carries an `X-User-Id` header with a seeded user's id, except `GET /users` and `/uploads/*`. The user's role decides what they may do.
 
-### Using it
-
-Open the repo in Claude Code. The four commands below cover a feature from idea to done. `005-incident-priority.md` is an example file name; yours is whatever step 1 creates.
-
-**1. Start a feature: plan it and change the contract**
-
-```
-/plan-feature Operators can mark an Incident as urgent, and Technicians see an Urgent label in the app
+```bash
+curl http://localhost:3000/users
+curl -H 'X-User-Id: u-op-1' 'http://localhost:3000/incidents?status=OPEN&_page=1&_limit=20'
 ```
 
-`contract-architect` writes `docs/handoffs/<id>-<slug>.md` with Given/When/Then criteria for each lane, changes `openapi.yaml`, and lists the lane tasks in order. Read the handoff before going on: the criteria are what every later step is judged against.
+The seeded ids are `u-tech-1`, `u-tech-2` (Technicians) and `u-op-1`, `u-op-2` (Operators).
 
-**2. Ask for analysis or a plan without changing anything**
+**Errors** are always `{ "error": { "code": "UPPER_SNAKE", "message": "..." } }`. Clients branch on `code`, never on `message`.
 
-```
-Read docs/handoffs/005-incident-priority.md and the mobile-data-sync skill. Explain what has to
-change in mobile/core/data for this, and what could go wrong with Incidents already queued
-offline. Do not edit any files.
-```
+| Status | Meaning | Example `code` |
+| --- | --- | --- |
+| `401` | Missing or unknown `X-User-Id` | `UNAUTHENTICATED`, `UNKNOWN_USER` |
+| `403` | Wrong role, or not the reporter | `FORBIDDEN` |
+| `404` | Not found | `NOT_FOUND` |
+| `409` | Conflict: the Incident is no longer `OPEN`, or the id belongs to someone else | `NOT_OPEN`, `ID_TAKEN` |
+| `422` | Validation failed, unknown field, or photo limit reached | `VALIDATION_ERROR`, `PHOTO_LIMIT` |
 
-**3. Build one lane**
+**How each app follows the contract**
 
-```
-/implement backend docs/handoffs/005-incident-priority.md
-/implement mobile docs/handoffs/005-incident-priority.md
-/implement admin docs/handoffs/005-incident-priority.md
-```
+| App | Shared models | When the contract changes |
+| --- | --- | --- |
+| Backend | Rules in `src/app.js` | Implement the change and add a test per status code |
+| Admin | `src/api/schema.d.ts`, generated, never hand-edited | Run `npm run gen:api` in `admin/` and commit the result |
+| Mobile | DTOs and mappers in `mobile/core/data/.../remote/`, written by hand | Update them field by field. A new enum value needs a mapper change, because unknown values are not ignored |
 
-Backend goes first. The implementer writes a failing test per criterion, makes it pass, runs the lane's gates, pastes the output under "Evidence" in the handoff, and sets its lane to `REVIEW`.
+Conventions shared by all three (camelCase JSON, `UPPER_SNAKE` enums, ISO-8601 UTC timestamps, idempotent writes) are in [`docs/agents/standards.md`](docs/agents/standards.md). How to change the contract safely: [`docs/agents/contract-change.md`](docs/agents/contract-change.md).
 
-**4. Give an agent a specific job**
+## Testing and quality
 
-```
-Use the android-implementer agent on docs/handoffs/005-incident-priority.md, criterion 3 only:
-the Urgent label on the list screen. Load the mobile-compose-ui skill first.
-```
+Run each block from the repository root. There is no CI; run these locally before you push.
 
-**5. Work on several lanes at once**
+**Backend**
 
-Once the backend lane is merged, mobile and admin do not depend on each other:
-
-```
-Run /implement mobile and /implement admin on docs/handoffs/005-incident-priority.md in parallel,
-each in its own git worktree.
+```bash
+cd backend && npm test
 ```
 
-The rules for branches, merge order and shared files are in [`docs/agents/parallel-work.md`](docs/agents/parallel-work.md).
+API tests on Node's test runner. Each starts a real server on a free port with a temporary copy of the seed data, so they never touch `db.json`.
 
-**6. Review and test**
+**Dashboard**
 
-```
-/review mobile docs/handoffs/005-incident-priority.md
-```
-
-The reviewer re-runs the gates itself and reports a verdict per section of its review skill, with `blocker` and `nit` findings. Blockers go back through `/implement`; then review again. To run a lane's gates by hand, the commands are in [`docs/agents/quality-gates.md`](docs/agents/quality-gates.md).
-
-**7. Debug or investigate**
-
-```
-/mobile-debugging An Incident stays on "Waiting to sync" after the emulator comes back online.
-Find the cause and show me the reproduction before fixing anything.
+```bash
+cd admin && npm run typecheck && npm run lint && npm test && npm run build
 ```
 
+Vitest unit tests cover the pure logic in `src/lib/` (filters, triage, overview counts).
+
+**Mobile**
+
+```bash
+cd mobile
+./gradlew :core:domain:allTests :core:data:testAndroidHostTest :core:data:iosSimulatorArm64Test
+./gradlew :feature:incidents:testAndroidHostTest :feature:incidents:iosSimulatorArm64Test :shared:iosSimulatorArm64Test
+./gradlew :androidApp:assembleDebug :shared:linkDebugFrameworkIosSimulatorArm64
+./gradlew :androidApp:lintDebug
 ```
-Without changing any files, explain how the dashboard decides which fields "Start work" sends,
-and where that is tested.
+
+The tests cover the domain rules, the sync state machine (offline create, retry after a lost response, Conflict handling, photo ordering) and the view models, on both the Android host and the iOS simulator. The `iosSimulatorArm64` tasks need Xcode; without a Mac, run the `testAndroidHostTest` tasks and `:androidApp:assembleDebug`.
+
+**Across the apps**
+
+```bash
+scripts/integration/run-integration.sh
 ```
 
-Only mobile has a debugging skill. For backend and admin, describe the failing request or page and ask for a reproduction first.
+Runs the five cross-app scenarios (report to triage, an Operator's change reaching the phone, Conflicts on edit and on delete, an offline create) with the app's real sync engine, the real API and the dashboard's real code. It starts its own API on port 3100, so nothing else needs to be running. It needs `npm install` done in `backend/` and `admin/`.
 
-**8. Finish**
+**Repository checks**
 
+```bash
+scripts/check-forbidden-terms.sh    # must exit 0 before every handoff
+scripts/check-agents.sh             # after changing .claude/, AGENTS.md or docs/agents/
 ```
-/verify-integration docs/handoffs/005-incident-priority.md
-```
 
-`integration-verifier` runs each criterion across the lanes, including [`scripts/integration/run-integration.sh`](scripts/integration/run-integration.sh), and gives a verdict per criterion. The feature is done when every lane reads `DONE` in the handoff, every criterion passes, and each lane's README matches its code.
+The full list of what must be green before a change counts as done is in [`docs/agents/quality-gates.md`](docs/agents/quality-gates.md).
 
-### Good habits
+## Development guidelines
 
-- **Pick the agent by the directory the change lands in.** A change to a request, response, error or domain term always starts with `/plan-feature`, even when it looks like a one-lane change.
-- **Skip the agents for small things.** A typo, a one-line fix or a question is faster asked directly in the main session; load the lane's skill if the answer depends on project conventions. Delegate when the work needs its own context: a whole criterion, a review, a long build loop.
-- **Never ask an agent to edit another lane.** Have it write the need under "Contract needs" or "Open questions" in the handoff, then run the right agent.
-- **Review in a fresh context.** Use `/review`; do not ask the agent that wrote the code whether it is correct.
-- **Parallel only when independent.** Mobile and admin can run together after the contract is merged. Two mobile agents can run together only on different modules, with the interface between them agreed in the handoff first.
-- **Raise the model for hard tasks, not for all tasks.** `/implement` already does this for sync-engine, Room-schema and authorization changes.
-- **When you change the workflow itself**, keep each fact in one place: the model and skills in the agent file, the reasons in the [agent matrix](docs/agents/agent-matrix.md), the knowledge in the skill. Then run `scripts/check-agents.sh`. Add a skill only when an agent keeps getting the same thing wrong; add an agent only when a job needs its own context or its own permissions.
+**Use the glossary.** [`GLOSSARY.md`](GLOSSARY.md) defines Incident, Technician, Operator, Status, Severity, Category, Sync State and Conflict. Use those words, with one meaning each, in code, tests, UI copy and docs.
 
-### Troubleshooting
+**Change the contract before the code.** Any change to a request, response or error starts in `backend/openapi.yaml`. Keep changes additive: new optional fields, new endpoints. A breaking change needs an ADR and a new path version.
+
+**Stay in one lane per change.** Backend, mobile and admin are separate lanes with separate rules. Read the lane's `AGENTS.md` before you start: [`backend/AGENTS.md`](backend/AGENTS.md), [`mobile/AGENTS.md`](mobile/AGENTS.md), [`admin/AGENTS.md`](admin/AGENTS.md). They are written for AI agents but apply equally to people.
+
+**Domain rules every app honours**
+
+- Only Operators change Status, assignee and Resolution Note.
+- A Technician edits, deletes or changes photos only while the Incident is `OPEN`.
+- An Incident has at most five photos.
+- On a Conflict the server version wins.
+
+**Architecture rules**
+
+- *Mobile:* dependencies point inward (see the module table above). `commonMain` has no platform imports; platform behaviour goes behind an interface. Every write lands in Room and the outbox first.
+- *Backend:* each rule lives in `src/app.js` next to its endpoint. Server-owned fields (`createdAt`, `updatedAt`, `reportedBy`, `activityLog`, `resolvedAt`) are never read from client input.
+- *Admin:* pure logic goes in plain functions under `src/lib/`; components stay thin. Filters live in the URL.
+
+**Code and naming**
+
+- Small modules with narrow interfaces, tested through the interface.
+- Names say what a thing is in the domain. Comments explain why, not what.
+- No secrets and no real personal data in seeds or tests.
+- Package and bundle ids start with `dev.fieldreporter`.
+- UI colours, Status and Severity tones and date formats follow the shared [design system](docs/design/design-system.md). A value changed on one platform is changed on the other in the same task.
+
+**Git**
+
+- Branch from `main`. Lane branches for a feature are named `<id>-<lane>`, for example `014-mobile`, where the id is the handoff file's number.
+- Commit messages follow the existing history: `feat: …`, `fix(mobile): …`, `test(admin): …`, `docs: …`, with one logical change per commit.
+- Merge order for a cross-lane feature: contract → backend → mobile and admin (in either order) → integration check. Details: [`docs/agents/parallel-work.md`](docs/agents/parallel-work.md).
+
+Full shared standards: [`docs/agents/standards.md`](docs/agents/standards.md).
+
+## Contributing
+
+Every feature follows the same seven steps: **plan → contract → implement → verify → review → document → handoff**. Each step and its completion criterion is in [`docs/agents/lifecycle.md`](docs/agents/lifecycle.md). In practice:
+
+1. **Plan.** Copy [`docs/handoffs/_template.md`](docs/handoffs/_template.md) to `docs/handoffs/<id>-<slug>.md`. Write the goal and the acceptance criteria as Given/When/Then, each naming the lane that proves it. The existing handoffs are worked examples; [`005-unassigned-filter.md`](docs/handoffs/005-unassigned-filter.md) covers all lanes.
+2. **Contract.** If a request, response or error changes, update `backend/openapi.yaml` first and record the change in the handoff.
+3. **Implement, red first.** Write a failing test for each criterion, then the smallest change that makes it pass. Backend goes first; mobile and admin can then proceed in parallel.
+4. **Verify.** Run your lane's commands from [Testing and quality](#testing-and-quality) and paste the output into the handoff under "Evidence". Check a UI change on an emulator or in a browser against the running API.
+5. **Review.** Someone who did not write the change reviews it against the handoff criteria, the contract and the lane's rules. Findings are a `blocker` or a `nit`; a change merges with zero blockers.
+6. **Document.** Update the lane README if commands, setup or behaviour changed, `GLOSSARY.md` for a new domain term, and this README if anything it describes changed. Add an ADR only for a choice that is hard to reverse.
+7. **Hand off.** Set the lane's status in the handoff file and run `scripts/integration/run-integration.sh` when the change touches sync, DTOs, the contract, filters or triage.
+
+**Before you open a pull request**
+
+- [ ] Each acceptance criterion maps to a named, passing test.
+- [ ] The lane's gates are green ([`quality-gates.md`](docs/agents/quality-gates.md)).
+- [ ] `npm run gen:api` in `admin/` leaves no diff, if the contract changed.
+- [ ] `scripts/check-forbidden-terms.sh` exits 0. The public repo must contain no reference to the assessing company.
+- [ ] READMEs match the code.
+
+**Working with AI agents.** The repo includes a [Claude Code](https://claude.com/claude-code) workflow that runs these steps with one specialised agent per lane: `/plan-feature`, `/implement`, `/review` and `/verify-integration`. The guide, with the agents, skills, example prompts and its own troubleshooting table, is [`docs/agents/README.md`](docs/agents/README.md).
+
+## Troubleshooting
 
 | Symptom | Cause and fix |
 | --- | --- |
-| An agent runs on the wrong model, or without its skills, after you edited its file | Agent definitions are read when a session starts. Restart Claude Code. |
-| `claude --agent <name>` has no skill text in context | Skills preload only when the agent runs as a subagent. Start it through a command or "Use the … agent", or load the skill by name. |
-| An agent or skill is not listed at all | Its frontmatter did not parse. Run `scripts/check-agents.sh` and `claude plugin validate .claude/agents`. A `description` containing `: ` must be reworded or quoted. |
-| The admin implementer says the browser check is owed | Lane agents have no browser tools. The main session does that check with the `claude-in-chrome` skill, which needs the Claude in Chrome extension. |
-| The mobile emulator check cannot run | It needs a running Android emulator and the backend on port 3000. Without one, the handoff records the check as not done. |
-| Integration tests show as skipped | They run only through `scripts/integration/run-integration.sh`, which starts its own API. |
-| An implementer stops with "Open questions" | It hit the same failure twice. Read the reproduction it recorded, then re-run `/implement`; the command passes a stronger model. |
-| Two agents changed the same file | They were not in separate worktrees, or one left its lane. The later lane rebases; see [`parallel-work.md`](docs/agents/parallel-work.md). |
+| `EADDRINUSE` when starting the API or the dashboard | Port 3000 or 3001 is taken. Stop the other process (`lsof -i :3000`), or start the API with `PORT=3005 npm start` and set `API_BASE_URL` in `admin/.env.local` to match. |
+| The dashboard shows an "API unavailable" panel | The backend is not running, or `API_BASE_URL` points elsewhere. Start `backend/` first, then choose **Try again**. |
+| The dashboard keeps returning to the sign-in page | No Operator is chosen in this browser yet. The choice is kept in a cookie, so a private window or cleared cookies asks again. |
+| Data looks wrong, or an Incident is stuck from an earlier session | Stop the API, run `npm run reset` in `backend/`, start it again. On the phone, clear the app's data or reinstall, because it keeps its own local copy. |
+| Every API call returns `401` | The `X-User-Id` header is missing or is not a seeded id. See `curl http://localhost:3000/users`. |
+| The Android app cannot load users or sync | The API is not running on port 3000, or you are on a physical device. `10.0.2.2` only works from the emulator; for a device, change `BASE_URL` to your computer's address on the local network. |
+| An Incident stays on *Waiting to sync* | The app cannot reach the API. Check the emulator's network and the backend terminal, then pull to refresh. |
+| An Incident shows *Sync failed* | Usually a Conflict: an Operator moved it out of *Open* before the edit arrived. This is expected; the server's version is shown. |
+| Gradle: `SDK location not found` | Set `ANDROID_HOME`, or open `mobile/` in Android Studio once so it writes `local.properties`. |
+| Gradle fails on the JDK version | Use JDK 21: check `java -version` and `JAVA_HOME`. |
+| `iosSimulatorArm64Test` tasks fail or are missing | They need Xcode on an Apple silicon Mac; the project has no Intel simulator target. Run the Android host tests instead. |
+| `npm run gen:api` leaves a diff in `schema.d.ts` | The contract changed and the types were not regenerated. Commit the result. |
+| `npm test` in `admin/` fails to start on an older Node | Vitest needs Node 22.12 or later. |
+| Admin integration tests do not run with `npm test` | By design. They need a real API and run through `scripts/integration/run-integration.sh`. |
+| A mobile build or test fails for no clear reason | Try `./gradlew --stop`, then run the task again with `--stacktrace`. The `mobile-debugging` skill in [`.claude/skills/`](.claude/skills/mobile-debugging/SKILL.md) has a fuller diagnosis loop. |
 
-**What has been checked, and what has not.** `scripts/check-agents.sh` confirms the files agree with each other. Starting each of the eight agents from a fresh session confirmed its model and preloaded skills. Reviewers have no edit tool and no agent has a browser, as intended. No feature has yet been taken through all seven steps with the current skills and model settings, so expect to tune them, the `haiku` choice for the backend lane first.
+Problems with the AI-agent workflow: [`docs/agents/README.md`](docs/agents/README.md#troubleshooting).
 
-## Status
+## Status and known limits
 
 | Area | State |
 | --- | --- |
 | Backend | Complete for the contract. Verified against both clients. |
 | Android app | Report, view, edit, delete, offline sync, camera and gallery, location, WorkManager sync. Run on an emulator. |
-| Dashboard | Sign-in, filterable list, detail page, triage actions. Run in a browser. |
-| iOS app | Shares all screens and logic with Android. Checked in the simulator: sign-in, location (with the permission prompt), gallery photo with compression, reporting, offline retry with backoff, pull-to-refresh, edit, and delete with undo ([`docs/handoffs/004-ios-verification.md`](docs/handoffs/004-ios-verification.md)). **Not verified:** a real camera capture (the simulator's camera takes no photo) and the background tasks (iOS does not run them in the simulator). |
-| Not built | A demo video, automated checks of what the screens show or of real devices (the cross-app logic is covered: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)) and real authentication (the API trusts an `X-User-Id` header). |
+| Dashboard | Sign-in, filterable list with overview tiles, detail page, triage actions. Run in a browser. |
+| iOS app | Shares all screens and logic with Android. Checked in the simulator: sign-in, location (with the permission prompt), gallery photo with compression, reporting, offline retry with backoff, pull-to-refresh, edit, and delete with undo ([`004-ios-verification.md`](docs/handoffs/004-ios-verification.md)). **Not verified:** a real camera capture (the simulator's camera takes no photo) and the background tasks (iOS does not run them in the simulator). |
 
-Smaller deviations from the original plan: the camera uses the system camera app instead of CameraX, and there is no map pin for adjusting a location.
+Not built:
+
+- **Real authentication.** The API trusts the `X-User-Id` header. This is a local mock, not a deployable backend.
+- **Automated UI and real-device tests.** The cross-app logic is automated ([`003-integration-check.md`](docs/handoffs/003-integration-check.md)); what the screens show is checked by hand.
+- **CI.** All checks run locally.
+- **Bulk actions** in the dashboard, and a **map pin** for adjusting a location in the app. The camera uses the system camera app, not an in-app viewfinder.
+
+## More documentation
+
+| Topic | Where |
+| --- | --- |
+| API contract | [`backend/openapi.yaml`](backend/openapi.yaml) |
+| Backend commands and behaviour | [`backend/README.md`](backend/README.md) |
+| Dashboard layout, filters and triage behaviour | [`admin/README.md`](admin/README.md) |
+| Mobile modules, sync and screens | [`mobile/README.md`](mobile/README.md) |
+| Domain terms | [`GLOSSARY.md`](GLOSSARY.md) |
+| Architecture decisions | [`docs/adr/`](docs/adr) |
+| Design system | [`docs/design/design-system.md`](docs/design/design-system.md) |
+| Development lifecycle | [`docs/agents/lifecycle.md`](docs/agents/lifecycle.md) |
+| Quality gates | [`docs/agents/quality-gates.md`](docs/agents/quality-gates.md) |
+| Shared standards | [`docs/agents/standards.md`](docs/agents/standards.md) |
+| Contract changes | [`docs/agents/contract-change.md`](docs/agents/contract-change.md) |
+| Parallel work, branches and merge order | [`docs/agents/parallel-work.md`](docs/agents/parallel-work.md) |
+| AI agent workflow | [`docs/agents/README.md`](docs/agents/README.md), [`AGENTS.md`](AGENTS.md) |
+| Feature history, with criteria and evidence | [`docs/handoffs/`](docs/handoffs) |
