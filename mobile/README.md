@@ -8,7 +8,7 @@ platforms (see `docs/adr/0001-shared-compose-multiplatform-ui.md` at the repo ro
 | `:core:domain` | Pure Kotlin: models, rules (`OPEN`-only edits, 5 photo cap), repository and scheduler interfaces |
 | `:core:data` | Room (source of truth and outbox), Ktor client, the sync engine, repository implementations, Koin module |
 | `:feature:incidents` | Compose Multiplatform screens and view models |
-| `:shared` | Umbrella that builds the single iOS framework |
+| `:shared` | Builds the single iOS framework and holds the iOS platform code: photos, location, sync scheduling |
 | `:androidApp` | The Android application |
 | `iosApp` | The iOS host app |
 

@@ -12,7 +12,7 @@ Kotlin Multiplatform app for Technicians: Compose Multiplatform UI on Android an
 | `:core:domain` | models, rules, repository and scheduler interfaces | coroutines only |
 | `:core:data` | Room, Ktor, `SyncEngine`, repositories, DTOs | `:core:domain` |
 | `:feature:incidents` | screens, view models, `PlatformCapabilities` | `:core:domain` |
-| `:shared` | iOS framework umbrella | all of the above |
+| `:shared` | iOS framework and the iOS platform code (camera, picker, location, sync scheduling) | all of the above |
 | `:androidApp`, `iosApp` | entry points, platform implementations, DI start-up | all |
 
 Platform behaviour (camera, location, compression, background sync) goes behind an interface in `commonMain` and is implemented in the app or in a platform source set.
