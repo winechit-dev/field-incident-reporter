@@ -43,8 +43,8 @@ Glossary terms, sentence case, and a verb on every button ("Start work", "Resolv
 
 ## Proving it
 
-Open the changed page against the running backend with the `claude-in-chrome` skill. Check each state, keyboard-only use of the changed control, dark mode, and a narrow window, and describe what you saw in the handoff.
+The changed page is opened in a browser against the running backend, and each state, keyboard-only use of the changed control, dark mode and a narrow window are checked and described in the handoff. Subagents have no browser tools. Say under "Evidence" that the browser check is still owed; the session that ran `/implement` does it with the `claude-in-chrome` skill and records what it saw.
 
 ## Done when
 
-The change reuses the existing primitives and tokens, all states render, and the browser check covered keyboard, dark mode and a narrow window.
+The change reuses the existing primitives and tokens, all states render, and the browser check covered keyboard, dark mode and a narrow window, or is recorded as owed.

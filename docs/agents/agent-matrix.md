@@ -13,7 +13,7 @@ Who runs each step, on which model, with which skill, across the three lanes. Th
 | `android-reviewer` | nothing | `opus` | Offline sync fails in ways only careful reading finds; reads much, writes little. | `mobile-review`, `mobile-architecture` | `mobile-data-sync`, `mobile-compose-ui` |
 | `admin-implementer` | `admin/` | `sonnet` | Strict TypeScript and a Next.js version whose docs must be read, not recalled. | `admin-architecture` | `admin-ui`, `admin-review` |
 | `admin-reviewer` | nothing | `opus` | Server/client boundaries, caching and access checks are easy to get subtly wrong; reads much, writes little. | `admin-review`, `admin-architecture` | `admin-ui` |
-| `integration-verifier` | nothing | `sonnet` | Runs scripts, an emulator and a browser and compares results with criteria. | none | `run`, `claude-in-chrome`, `mobile-debugging` |
+| `integration-verifier` | nothing | `sonnet` | Runs scripts and an emulator and compares results with criteria. | none | `run`, `mobile-debugging` |
 
 Every reviewer runs one tier above its lane's implementer, so the check is independent of the author's blind spots. No architect, tester, UI or security agent exists per lane: `contract-architect` already designs across lanes, tests are written by the implementer red-first, and UI and security are sections of each review skill. A separate agent for any of them would re-read the same diff.
 
@@ -30,10 +30,10 @@ Every reviewer runs one tier above its lane's implementer, so the check is indep
 | --- | --- | --- | --- |
 | `contract-architect` | a feature idea, or "Contract needs" in a handoff | the handoff with Given/When/Then criteria per lane; the contract delta; glossary and ADR changes | `backend-implementer`; then mobile and admin in parallel |
 | `<lane>-implementer` | the handoff and the merged contract | tests seen red then green, code inside its lane, gate output under "Evidence", a device or browser description for UI changes, lane status `REVIEW` | its lane's reviewer; contract gaps go to `contract-architect` through "Contract needs" |
-| `<lane>-reviewer` | the handoff, the diff, its own gate run | a verdict per review-skill section and per gate; findings as `blocker` or `nit` with `file:line` and the failing scenario | the implementer while blockers remain; otherwise the lane is `DONE` |
+| `<lane>-reviewer` | the handoff, the diff, its own gate run | a verdict per review-skill section and per gate; findings as `blocker` or `nit` with `file:line` and the failing scenario | the implementer, who fixes blockers and, once none remain, sets the lane `DONE` (reviewers change no files) |
 | `integration-verifier` | handoffs reading `DONE` in every lane | one verdict per acceptance criterion | the failing lane's implementer, or the feature is done |
 
-Agents talk through the handoff file. No agent edits another's lane, and no agent reviews its own work.
+Agents talk through the handoff file. No agent edits another's lane, and no agent reviews its own work. Subagents cannot start other subagents: the main session runs each step through the commands and carries nothing between agents except the handoff file.
 
 ## Stages
 

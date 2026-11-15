@@ -7,6 +7,9 @@ A gate is **green** or **red**; there is no amber. Paste the final output of eac
 - Each handoff acceptance criterion maps to a named, passing test.
 - The lane README still matches the commands and setup.
 
+## Workflow files (`.claude/`, `AGENTS.md`, `docs/agents/`)
+- `scripts/check-agents.sh` exits 0 after any change to an agent, a skill, a command or a doc that names one.
+
 ## Backend (`backend/`)
 - `npm test` is green.
 - Each changed operation has a test per documented status code.
@@ -26,7 +29,7 @@ A gate is **green** or **red**; there is no amber. Paste the final output of eac
 ## Admin (`admin/`)
 - `npm run typecheck`, `npm run lint`, `npm test`, `npm run build` are green.
 - `npm run gen:api` leaves no diff against the committed `schema.d.ts`.
-- A UI change is checked in a browser against the running backend, and the result is described in the handoff.
+- A UI change is checked in a browser against the running backend, and the result is described in the handoff. The main session runs this check; the lane agents have no browser.
 
 ## Integration (`integration-verifier`)
 - Backend running; one acceptance scenario per criterion passes end to end across lanes.

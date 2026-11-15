@@ -23,7 +23,7 @@ Next.js App Router, TypeScript (`strict`), Tailwind, shadcn/ui, Vitest. The API 
 2. Write the failing test: pure logic (filter-to-query building, allowed Status actions, activity-log formatting) in Vitest.
 3. Implement. Keep pure logic in plain functions under `src/lib/`; components stay thin.
 4. Run the admin gates in `docs/agents/quality-gates.md`.
-5. For any UI change, open the page in a browser against the running backend (`claude-in-chrome` skill) and describe what you saw.
+5. For any UI change, the page is opened in a browser against the running backend and described in the handoff. The implementer has no browser tools, so it records the check as owed and the session that ran `/implement` does it with the `claude-in-chrome` skill.
 
 ## Practices
 - One typed API module (`src/api/`) wraps every call and adds `X-User-Id` from the Operator picker.

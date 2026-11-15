@@ -55,7 +55,7 @@ There is no login. The sign-in action looks the chosen id up through the API, th
 | --- | --- |
 | A decision | a Vitest test beside the function in `src/lib/` (`npm test`) |
 | What the dashboard sends to the API | an `*.itest.ts` in `src/integration/`, run by `scripts/integration/run-integration.sh` against a real API, using the shared fixtures in `scripts/integration/fixtures/` |
-| What the page shows | open it in a browser against the running backend (`claude-in-chrome` skill) and describe it in the handoff |
+| What the page shows | a browser check against the running backend, described in the handoff (see `admin-ui`, "Proving it", for who runs it) |
 
 There are no component or end-to-end tests; logic is kept out of components so it can be tested as plain functions. Write the test first and paste it failing, then passing.
 
