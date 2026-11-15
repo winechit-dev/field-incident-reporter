@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_FILTERS, PAGE_SIZE, UNASSIGNED_OPTION, hasActiveFilters, pageCount, parseFilters, toApiQuery, toSearchParams,
+  DEFAULT_FILTERS, PAGE_SIZE, UNASSIGNED_OPTION, activeFilterCount, hasActiveFilters, pageCount, parseFilters, toApiQuery, toSearchParams,
 } from "./filters";
 
 describe("parseFilters", () => {
@@ -133,5 +133,18 @@ describe("Unassigned filter", () => {
   it("counts as an active filter (criterion 11)", () => {
     expect(hasActiveFilters(parseFilters({ assigned: "false" }))).toBe(true);
     expect(hasActiveFilters(parseFilters({ assigned: "maybe" }))).toBe(false);
+  });
+});
+
+describe("activeFilterCount", () => {
+  it("is zero for the default view, whatever the sorting and page", () => {
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, sort: "updatedAt", order: "asc", page: 3 })).toBe(0);
+  });
+
+  it("counts each narrowing filter once, and a date range as one", () => {
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, status: "OPEN", q: "lift" })).toBe(2);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, from: "2026-01-01", to: "2026-01-31" })).toBe(1);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, unassigned: true, severity: "HIGH", category: "SAFETY" })).toBe(3);
   });
 });

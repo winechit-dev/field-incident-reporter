@@ -1,21 +1,32 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { ApiError, ApiUnavailableError } from "@/api/client";
 import { listIncidents, listUsers } from "@/api/incidents";
 import { FilterBar } from "@/components/filter-bar";
 import { IncidentTable } from "@/components/incident-table";
 import { Pagination } from "@/components/pagination";
-import { parseFilters, type Filters } from "@/lib/filters";
+import { IncidentsSkeleton } from "@/components/skeletons";
+import { ApiUnavailable, EmptyState } from "@/components/states";
+import { Button } from "@/components/ui/button";
+import { hasActiveFilters, parseFilters, type Filters } from "@/lib/filters";
 import { getOperator } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Incidents" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default function IncidentsPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <main className="flex flex-col gap-5">
-      <h1 className="text-2xl font-semibold">Incidents</h1>
+    <main id="main" className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold">Incidents</h1>
+        <p className="text-sm text-muted-foreground">Reports from Technicians in the field. Open one to triage it.</p>
+      </div>
       {/* Filters, the cookie and the API are all per-request, so the page streams in behind a boundary. */}
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading incidents…</p>}>
+      <Suspense fallback={<IncidentsSkeleton />}>
         <IncidentsContent searchParams={searchParams} />
       </Suspense>
     </main>
@@ -35,26 +46,32 @@ async function load(operatorId: string, filters: Filters) {
 }
 
 async function IncidentsContent({ searchParams }: { searchParams: SearchParams }) {
+  await connection(); // always live data, never prerendered
   const filters = parseFilters(await searchParams);
   const operator = await getOperator();
   if (!operator) redirect("/sign-in");
 
   const result = await load(operator.id, filters);
   if (result.status === "unknown-user") redirect("/sign-in"); // the chosen user no longer exists
-  if (result.status === "unavailable") {
-    return <p role="alert" className="text-sm text-destructive">{result.message}. Start the backend and reload.</p>;
-  }
+  if (result.status === "unavailable") return <ApiUnavailable message={result.message} />;
 
   const { incidents, total, users } = result;
   return (
     <>
       <FilterBar filters={filters} operators={users.filter((u) => u.role === "OPERATOR")} />
-      {incidents.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No incidents match these filters.
-        </p>
-      ) : (
+      {incidents.length > 0 ? (
         <IncidentTable incidents={incidents} users={users} />
+      ) : total > 0 ? (
+        // Past the last page, for example after a shared link outlived its Incidents.
+        <EmptyState title="Nothing on this page." description="There are fewer incidents than this page number expects.">
+          <Button variant="outline" nativeButton={false} render={<Link href="/incidents" />}>Go to the first page</Button>
+        </EmptyState>
+      ) : hasActiveFilters(filters) ? (
+        <EmptyState title="No incidents match these filters." description="Loosen or clear the filters to see more.">
+          <Button variant="outline" nativeButton={false} render={<Link href="/incidents" />}>Clear filters</Button>
+        </EmptyState>
+      ) : (
+        <EmptyState title="No incidents yet." description="When a Technician reports one from the field, it appears here." />
       )}
       <Pagination filters={filters} total={total} />
     </>

@@ -7,7 +7,10 @@ export async function SessionBar() {
   if (!operator) return null;
   return (
     <form action={signOut} className="flex items-center gap-3 text-sm">
-      <span className="text-muted-foreground">Signed in as {operator.name}</span>
+      <span className="text-muted-foreground">
+        <span className="max-sm:sr-only">Signed in as </span>
+        <span className="font-medium text-foreground">{operator.name}</span>
+      </span>
       <Button type="submit" variant="outline">Switch operator</Button>
     </form>
   );

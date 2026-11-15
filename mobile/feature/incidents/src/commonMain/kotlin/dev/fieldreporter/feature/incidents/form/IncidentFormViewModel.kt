@@ -39,6 +39,8 @@ data class FormState(
     val blockedMessage: String? = null,
     /** Set once the form has been saved and the screen should close. */
     val done: Boolean = false,
+    /** Whether closing now would lose something the Technician entered. The screen asks first. */
+    val hasUnsavedChanges: Boolean = false,
 ) {
     val canAddPhoto: Boolean get() = photos.size < MAX_PHOTOS
 }
@@ -59,6 +61,21 @@ class IncidentFormViewModel(
     private var original: Incident? = null
     private var counter = 0
 
+    /** Every state change goes through here, so [FormState.hasUnsavedChanges] is never stale. */
+    private fun change(transform: (FormState) -> FormState) = _state.update { current ->
+        transform(current).let { it.copy(hasUnsavedChanges = hasUnsavedChanges(it)) }
+    }
+
+    private fun hasUnsavedChanges(s: FormState): Boolean = when {
+        s.done || s.blockedMessage != null -> false
+        // Photo changes on an edit are applied as they happen, so only the fields can be unsaved.
+        editingId != null -> original != null && diff(s).let {
+            it.title != null || it.description != null || it.category != null || it.severity != null || it.location != null
+        }
+        else -> s.title.isNotBlank() || s.description.isNotBlank() || s.photos.isNotEmpty() ||
+            s.location != Location() || s.category != FormState().category || s.severity != FormState().severity
+    }
+
     init {
         if (editingId != null) load(editingId)
     }
@@ -67,40 +84,42 @@ class IncidentFormViewModel(
         viewModelScope.launch {
             val incident = incidents.incident(id).first()
             if (incident == null || !incident.isEditable) {
-                _state.update { it.copy(loaded = true, blockedMessage = BLOCKED) }
+                change { it.copy(loaded = true, blockedMessage = BLOCKED) }
                 return@launch
             }
             original = incident
-            _state.value = FormState(
-                loaded = true, title = incident.title, description = incident.description,
-                category = incident.category, severity = incident.severity, location = incident.location,
-                photos = incident.photos.toFormPhotos(),
-            )
+            change {
+                FormState(
+                    loaded = true, title = incident.title, description = incident.description,
+                    category = incident.category, severity = incident.severity, location = incident.location,
+                    photos = incident.photos.toFormPhotos(),
+                )
+            }
             // Keep photos live: uploads finish and the server swaps local files for URLs.
             incidents.incident(id).collect { latest ->
                 if (latest == null || !latest.isEditable) {
-                    _state.update { it.copy(blockedMessage = BLOCKED) }
+                    change { it.copy(blockedMessage = BLOCKED) }
                 } else {
-                    _state.update { it.copy(photos = latest.photos.toFormPhotos()) }
+                    change { it.copy(photos = latest.photos.toFormPhotos()) }
                 }
             }
         }
     }
 
-    fun onTitle(value: String) = _state.update { it.copy(title = value, titleError = null) }
-    fun onDescription(value: String) = _state.update { it.copy(description = value, descriptionError = null) }
-    fun onCategory(value: Category) = _state.update { it.copy(category = value) }
-    fun onSeverity(value: Severity) = _state.update { it.copy(severity = value) }
+    fun onTitle(value: String) = change { it.copy(title = value, titleError = null) }
+    fun onDescription(value: String) = change { it.copy(description = value, descriptionError = null) }
+    fun onCategory(value: Category) = change { it.copy(category = value) }
+    fun onSeverity(value: Severity) = change { it.copy(severity = value) }
     fun onAddress(value: String) =
-        _state.update { it.copy(location = it.location.copy(address = value.ifBlank { null })) }
+        change { it.copy(location = it.location.copy(address = value.ifBlank { null })) }
 
     /** @param found null when the lookup failed, which leaves the location as it was. */
     fun onLocationFound(found: Location?) {
         if (found == null) {
-            _state.update { it.copy(locationError = "Couldn't find your location. Type an address instead.") }
+            change { it.copy(locationError = "Couldn't find your location. Type an address instead.") }
             return
         }
-        _state.update {
+        change {
             it.copy(location = found.copy(address = found.address ?: it.location.address), locationError = null)
         }
     }
@@ -108,7 +127,7 @@ class IncidentFormViewModel(
     fun onPhotoAdded(path: String) {
         if (!_state.value.canAddPhoto) return
         if (editingId == null) {
-            _state.update { it.copy(photos = it.photos + FormPhoto("new-${counter++}", path), photoError = null) }
+            change { it.copy(photos = it.photos + FormPhoto("new-${counter++}", path), photoError = null) }
         } else {
             viewModelScope.launch {
                 try {
@@ -116,7 +135,7 @@ class IncidentFormViewModel(
                 } catch (e: PhotoLimitException) {
                     // The button is hidden at five photos, so this is a race at worst.
                 } catch (e: NotEditableException) {
-                    _state.update { it.copy(blockedMessage = BLOCKED) }
+                    change { it.copy(blockedMessage = BLOCKED) }
                 }
             }
         }
@@ -124,13 +143,13 @@ class IncidentFormViewModel(
 
     fun onPhotoRemoved(photo: FormPhoto) {
         if (editingId == null) {
-            _state.update { it.copy(photos = it.photos.filterNot { p -> p.id == photo.id }) }
+            change { it.copy(photos = it.photos.filterNot { p -> p.id == photo.id }) }
         } else {
             viewModelScope.launch {
                 try {
                     incidents.removePhoto(editingId, photo.id)
                 } catch (e: NotEditableException) {
-                    _state.update { it.copy(blockedMessage = BLOCKED) }
+                    change { it.copy(blockedMessage = BLOCKED) }
                 }
             }
         }
@@ -143,10 +162,10 @@ class IncidentFormViewModel(
         val descriptionError = if (s.description.length > 2000) "At most 2000 characters" else null
         val photoError = if (editingId == null && requirePhoto && s.photos.isEmpty()) "Add at least one photo" else null
         if (titleError != null || descriptionError != null || photoError != null) {
-            _state.update { it.copy(titleError = titleError, descriptionError = descriptionError, photoError = photoError) }
+            change { it.copy(titleError = titleError, descriptionError = descriptionError, photoError = photoError) }
             return
         }
-        _state.update { it.copy(saving = true) }
+        change { it.copy(saving = true) }
         viewModelScope.launch {
             try {
                 if (editingId == null) {
@@ -159,9 +178,9 @@ class IncidentFormViewModel(
                 } else {
                     incidents.edit(editingId, diff(s))
                 }
-                _state.update { it.copy(saving = false, done = true) }
+                change { it.copy(saving = false, done = true) }
             } catch (e: NotEditableException) {
-                _state.update { it.copy(saving = false, blockedMessage = BLOCKED) }
+                change { it.copy(saving = false, blockedMessage = BLOCKED) }
             }
         }
     }

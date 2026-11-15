@@ -1,6 +1,8 @@
 package dev.fieldreporter.feature.incidents
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 
 internal sealed interface Screen {
     data object List : Screen
@@ -40,5 +42,39 @@ internal class Navigator {
     fun backToList() {
         stack.clear()
         stack.add(Screen.List)
+    }
+
+    /** The back stack as plain strings, so it survives rotation and process death. */
+    fun snapshot(): List<String> = listOf(visits.toString()) + stack.map { screen ->
+        when (screen) {
+            Screen.List -> "list"
+            is Screen.Detail -> "detail:${screen.id}"
+            is Screen.Form -> "form:${screen.visit}:${screen.editingId.orEmpty()}"
+        }
+    }
+
+    companion object {
+        /** Rebuilds a navigator from [snapshot]. Anything unreadable starts again on the list. */
+        fun restore(saved: List<String>): Navigator {
+            val visits = saved.firstOrNull()?.toIntOrNull() ?: return Navigator()
+            val screens = saved.drop(1).map { entry ->
+                val parts = entry.split(':', limit = 3)
+                when {
+                    entry == "list" -> Screen.List
+                    parts[0] == "detail" && parts.size >= 2 -> Screen.Detail(entry.substringAfter(':'))
+                    parts[0] == "form" && parts.size == 3 ->
+                        Screen.Form(parts[2].ifEmpty { null }, parts[1].toIntOrNull() ?: return Navigator())
+                    else -> return Navigator()
+                }
+            }
+            if (screens.firstOrNull() != Screen.List) return Navigator()
+            return Navigator().apply {
+                this.visits = visits
+                stack.clear()
+                stack.addAll(screens)
+            }
+        }
+
+        val Saver: Saver<Navigator, Any> = listSaver(save = { it.snapshot() }, restore = { restore(it) })
     }
 }

@@ -1,22 +1,29 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { ApiError, ApiUnavailableError } from "@/api/client";
 import { getIncident, listUsers } from "@/api/incidents";
 import { IncidentDetail } from "@/components/incident-detail";
+import { ArrowLeft } from "lucide-react";
+import { IncidentSkeleton } from "@/components/skeletons";
+import { ApiUnavailable } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { getOperator } from "@/lib/session";
 
+export const metadata: Metadata = { title: "Incident" };
+
 export default function IncidentPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <main className="flex flex-col gap-5">
+    <main id="main" className="flex flex-col gap-4">
       <div>
-        <Button variant="ghost" nativeButton={false} render={<Link href="/incidents" />}>
-          ← All incidents
+        <Button variant="ghost" className="-ml-2.5 text-muted-foreground" nativeButton={false} render={<Link href="/incidents" />}>
+          <ArrowLeft aria-hidden="true" /> All incidents
         </Button>
       </div>
       {/* The cookie, the route parameter and the API are all per-request, so this streams in. */}
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading incident…</p>}>
+      <Suspense fallback={<IncidentSkeleton />}>
         <Content params={params} />
       </Suspense>
     </main>
@@ -37,6 +44,7 @@ async function load(operatorId: string, id: string) {
 }
 
 async function Content({ params }: { params: Promise<{ id: string }> }) {
+  await connection(); // always live data, never prerendered
   const { id } = await params;
   const operator = await getOperator();
   if (!operator) redirect("/sign-in");
@@ -44,8 +52,6 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   const result = await load(operator.id, id);
   if (result.status === "unknown-user") redirect("/sign-in");
   if (result.status === "not-found") notFound();
-  if (result.status === "unavailable") {
-    return <p role="alert" className="text-sm text-destructive">{result.message}. Start the backend and reload.</p>;
-  }
+  if (result.status === "unavailable") return <ApiUnavailable message={result.message} />;
   return <IncidentDetail incident={result.incident} users={result.users} />;
 }

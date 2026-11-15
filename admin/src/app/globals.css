@@ -2,7 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode follows the system setting; there is no in-app switch. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme inline {
   --color-background: var(--background);
@@ -27,6 +28,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -48,73 +50,82 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Design tokens. The brand blue and the Status and Severity hues are shared with the mobile
+ * app (mobile/feature/incidents/.../ui/Theme.kt); see docs/design/design-system.md.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #f6f7f9;
+  --foreground: #12161d;
+  --card: #ffffff;
+  --card-foreground: #12161d;
+  --popover: #ffffff;
+  --popover-foreground: #12161d;
+  --primary: #2a56c6;
+  --primary-foreground: #ffffff;
+  --secondary: #eceff3;
+  --secondary-foreground: #1d2430;
+  --muted: #eef0f4;
+  --muted-foreground: #586172;
+  --accent: #eaf0fd;
+  --accent-foreground: #1c3f9a;
+  --destructive: #c62828;
+  --success: #166534;
+  --border: #e1e5ea;
+  --input: #cdd3dc;
+  --ring: #2a56c6;
+  --chart-1: #2a56c6;
+  --chart-2: #b45309;
+  --chart-3: #166534;
+  --chart-4: #586172;
+  --chart-5: #c62828;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #12161d;
+  --sidebar-primary: #2a56c6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaf0fd;
+  --sidebar-accent-foreground: #1c3f9a;
+  --sidebar-border: #e1e5ea;
+  --sidebar-ring: #2a56c6;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #0e1116;
+    --foreground: #eceef2;
+    --card: #161a21;
+    --card-foreground: #eceef2;
+    --popover: #161a21;
+    --popover-foreground: #eceef2;
+    --primary: #a9c2ff;
+    --primary-foreground: #0b2a6f;
+    --secondary: #222833;
+    --secondary-foreground: #eceef2;
+    --muted: #1e232c;
+    --muted-foreground: #a0a9b8;
+    --accent: #1c2740;
+    --accent-foreground: #c9d8ff;
+    --destructive: #ff8a80;
+    --success: #86efac;
+    --border: rgb(255 255 255 / 12%);
+    --input: rgb(255 255 255 / 20%);
+    --ring: #a9c2ff;
+    --chart-1: #a9c2ff;
+    --chart-2: #fcd34d;
+    --chart-3: #86efac;
+    --chart-4: #a0a9b8;
+    --chart-5: #ff8a80;
+    --sidebar: #161a21;
+    --sidebar-foreground: #eceef2;
+    --sidebar-primary: #a9c2ff;
+    --sidebar-primary-foreground: #0b2a6f;
+    --sidebar-accent: #1c2740;
+    --sidebar-accent-foreground: #c9d8ff;
+    --sidebar-border: rgb(255 255 255 / 12%);
+    --sidebar-ring: #a9c2ff;
+  }
 }
 
 @layer base {

@@ -120,6 +120,11 @@ export function hasActiveFilters(f: Filters): boolean {
   return Boolean(f.status || f.severity || f.category || f.assignee || f.unassigned || f.q || f.from || f.to);
 }
 
+/** How many things narrow the list. Sorting and paging do not; a date range counts once. */
+export function activeFilterCount(f: Filters): number {
+  return [f.status, f.severity, f.category, f.assignee || f.unassigned, f.q, f.from || f.to].filter(Boolean).length;
+}
+
 export function pageCount(total: number): number {
   return Math.max(1, Math.ceil(total / PAGE_SIZE));
 }

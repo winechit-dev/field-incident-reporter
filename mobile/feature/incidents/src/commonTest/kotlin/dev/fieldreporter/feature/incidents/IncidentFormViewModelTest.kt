@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -101,5 +102,42 @@ class IncidentFormViewModelTest {
         vm.onLocationFound(null)
         assertNotNull(vm.state.value.locationError)
         assertEquals(16.8, vm.state.value.location.latitude, "a failed lookup keeps the earlier fix")
+    }
+
+    @Test
+    fun aNewReportHasUnsavedChangesOnceSomethingIsEntered() = runTest {
+        val vm = vm(FakeIncidentRepository())
+        assertFalse(vm.state.value.hasUnsavedChanges, "an untouched form can be closed without asking")
+
+        vm.onTitle("Leak")
+        assertTrue(vm.state.value.hasUnsavedChanges)
+        vm.onTitle("  ")
+        assertFalse(vm.state.value.hasUnsavedChanges, "only whitespace is nothing to lose")
+
+        vm.onPhotoAdded("/cache/a.jpg")
+        assertTrue(vm.state.value.hasUnsavedChanges, "a photo held in the form would be lost")
+    }
+
+    @Test
+    fun anEditHasUnsavedChangesOnlyWhileAFieldDiffersFromTheIncident() = runTest {
+        val repo = FakeIncidentRepository(listOf(anIncident("i1")))
+        val vm = vm(repo, editingId = "i1")
+        advanceUntilIdle()
+        assertFalse(vm.state.value.hasUnsavedChanges)
+
+        vm.onSeverity(dev.fieldreporter.core.domain.Severity.LOW)
+        assertTrue(vm.state.value.hasUnsavedChanges)
+        vm.onSeverity(dev.fieldreporter.core.domain.Severity.HIGH)
+        assertFalse(vm.state.value.hasUnsavedChanges, "back to the stored value")
+    }
+
+    @Test
+    fun aSavedFormHasNothingUnsaved() = runTest {
+        val vm = vm(FakeIncidentRepository())
+        vm.onTitle("Leak")
+        vm.submit()
+        advanceUntilIdle()
+        assertTrue(vm.state.value.done)
+        assertFalse(vm.state.value.hasUnsavedChanges)
     }
 }

@@ -78,4 +78,40 @@ class NavigatorTest {
         assertEquals(Screen.List, nav.current)
         assertFalse(nav.canGoBack)
     }
+
+    @Test
+    fun aRestoredNavigatorShowsTheSameScreenAndBackStack() {
+        // The activity is recreated on rotation and after process death. Before this, the back
+        // stack was lost and a half-written report dropped the Technician back on the list.
+        val nav = Navigator()
+        nav.openDetail("i1")
+        nav.openForm(editingId = "i1")
+        val formKey = nav.formKey()
+
+        val restored = Navigator.restore(nav.snapshot())
+
+        assertEquals(nav.stack.toList(), restored.stack.toList())
+        assertEquals(formKey, restored.formKey(), "the form keeps its view model, so what was typed is still there")
+        restored.back()
+        assertEquals(Screen.Detail("i1"), restored.current)
+    }
+
+    @Test
+    fun aRestoredNavigatorStillGivesTheNextFormAFreshKey() {
+        val nav = Navigator()
+        nav.openForm()
+        val first = nav.formKey()
+        nav.back()
+
+        val restored = Navigator.restore(nav.snapshot())
+        restored.openForm()
+
+        assertNotEquals(first, restored.formKey())
+    }
+
+    @Test
+    fun aSnapshotThatCannotBeReadStartsOnTheList() {
+        val restored = Navigator.restore(listOf("3", "detail:i1", "something-else"))
+        assertEquals(listOf<Screen>(Screen.List), restored.stack.toList())
+    }
 }

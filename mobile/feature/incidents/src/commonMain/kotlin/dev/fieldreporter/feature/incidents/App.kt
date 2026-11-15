@@ -1,10 +1,19 @@
 package dev.fieldreporter.feature.incidents
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.map
@@ -20,6 +29,7 @@ import dev.fieldreporter.feature.incidents.form.IncidentFormScreen
 import dev.fieldreporter.feature.incidents.form.IncidentFormViewModel
 import dev.fieldreporter.feature.incidents.list.IncidentListScreen
 import dev.fieldreporter.feature.incidents.list.IncidentListViewModel
+import dev.fieldreporter.feature.incidents.ui.FieldReporterTheme
 import dev.fieldreporter.feature.incidents.users.UserPickerScreen
 import dev.fieldreporter.feature.incidents.users.UserPickerViewModel
 
@@ -38,13 +48,17 @@ fun App(
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context).components { add(KtorNetworkFetcherFactory()) }.build()
     }
-    MaterialTheme {
-        val session by remember(users) { users.currentUser.map { if (it == null) Session.SignedOut else Session.SignedIn } }
-            .collectAsStateWithLifecycle(Session.Loading)
-        when (session) {
-            Session.Loading -> Unit // avoids flashing the picker while the saved user loads
-            Session.SignedOut -> UserPickerScreen(viewModel { UserPickerViewModel(users) })
-            Session.SignedIn -> Signed(incidents, users, capabilities)
+    FieldReporterTheme {
+        // The surface paints the theme's background behind every screen, including the blank
+        // moment while the saved user loads, so a dark theme never flashes white.
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            val session by remember(users) { users.currentUser.map { if (it == null) Session.SignedOut else Session.SignedIn } }
+                .collectAsStateWithLifecycle(Session.Loading)
+            when (session) {
+                Session.Loading -> Unit // avoids flashing the picker while the saved user loads
+                Session.SignedOut -> UserPickerScreen(viewModel { UserPickerViewModel(users) })
+                Session.SignedIn -> Signed(incidents, users, capabilities)
+            }
         }
     }
 }
@@ -52,11 +66,30 @@ fun App(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun Signed(incidents: IncidentRepository, users: UserRepository, capabilities: PlatformCapabilities) {
-    val nav = remember { Navigator() }
+    val nav = rememberSaveable(saver = Navigator.Saver) { Navigator() }
     val listViewModel = viewModel { IncidentListViewModel(incidents, users) }
     BackHandler(enabled = nav.canGoBack) { nav.back() }
 
-    when (val screen = nav.current) {
+    // A short cross-fade between screens; long enough to read as a transition, short enough not to wait for.
+    AnimatedContent(
+        targetState = nav.current,
+        transitionSpec = { fadeIn(tween(SCREEN_FADE_MS)) togetherWith fadeOut(tween(SCREEN_FADE_MS)) },
+        label = "screen",
+    ) { screen -> Destination(screen, nav, listViewModel, incidents, users, capabilities) }
+}
+
+private const val SCREEN_FADE_MS = 150
+
+@Composable
+private fun Destination(
+    screen: Screen,
+    nav: Navigator,
+    listViewModel: IncidentListViewModel,
+    incidents: IncidentRepository,
+    users: UserRepository,
+    capabilities: PlatformCapabilities,
+) {
+    when (screen) {
         Screen.List -> IncidentListScreen(
             viewModel = listViewModel,
             onOpen = { nav.openDetail(it.id) },

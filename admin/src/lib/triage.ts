@@ -42,6 +42,18 @@ export function actionsFor(status: Status): Exclude<Intent, "save">[] {
   }
 }
 
+/** The usual next step, shown as the main button. Reopening is rare, so it never is. */
+export function primaryAction(status: Status): Exclude<Intent, "save"> | null {
+  switch (status) {
+    case "OPEN":
+      return "start";
+    case "IN_PROGRESS":
+      return "resolve";
+    case "RESOLVED":
+      return null;
+  }
+}
+
 /**
  * Turns a form submission into the smallest valid change: only fields that differ from the
  * Incident as it stands are included, so the Activity Log and timestamps change only when

@@ -9,7 +9,7 @@ const STATUS_STYLE: Record<Status, string> = {
 };
 
 const SEVERITY_STYLE: Record<Severity, string> = {
-  LOW: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  LOW: "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   MEDIUM: "bg-yellow-100 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-300",
   HIGH: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-300",
   CRITICAL: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",

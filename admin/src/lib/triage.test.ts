@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionsFor, buildPatch, MAX_NOTE_LENGTH, type Current } from "./triage";
+import { actionsFor, buildPatch, MAX_NOTE_LENGTH, primaryAction, type Current } from "./triage";
 
 const me = "u-op-1";
 const operators = ["u-op-1", "u-op-2"];
@@ -104,5 +104,19 @@ describe("actionsFor", () => {
     expect(actionsFor("OPEN")).toEqual(["start", "resolve"]);
     expect(actionsFor("IN_PROGRESS")).toEqual(["resolve"]);
     expect(actionsFor("RESOLVED")).toEqual(["reopen"]);
+  });
+});
+
+describe("primaryAction", () => {
+  it("is the usual next step for each Status", () => {
+    expect(primaryAction("OPEN")).toBe("start");
+    expect(primaryAction("IN_PROGRESS")).toBe("resolve");
+    expect(primaryAction("RESOLVED")).toBeNull();
+  });
+
+  it("is always one of the actions offered for that Status", () => {
+    for (const status of ["OPEN", "IN_PROGRESS"] as const) {
+      expect(actionsFor(status)).toContain(primaryAction(status));
+    }
   });
 });
