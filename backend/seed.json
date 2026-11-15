@@ -1,0 +1,83 @@
+{
+  "users": [
+    { "id": "u-tech-1", "name": "Aung Kyaw", "role": "TECHNICIAN" },
+    { "id": "u-tech-2", "name": "Thiri Win", "role": "TECHNICIAN" },
+    { "id": "u-op-1", "name": "Mya Sandar", "role": "OPERATOR" },
+    { "id": "u-op-2", "name": "Htet Naing", "role": "OPERATOR" }
+  ],
+  "incidents": [
+    {
+      "id": "3f1c6c1e-0a54-4e0e-9a43-000000000001",
+      "title": "Hydraulic lift leaking oil",
+      "description": "Lift 3 in the loading bay is leaking hydraulic oil onto the floor.",
+      "category": "EQUIPMENT",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "location": { "latitude": 16.8409, "longitude": 96.1735, "address": "Loading bay 3" },
+      "photos": [],
+      "reportedBy": "u-tech-1",
+      "assignee": null,
+      "resolutionNote": null,
+      "resolvedAt": null,
+      "activityLog": [],
+      "createdAt": "2026-11-10T08:15:00.000Z",
+      "updatedAt": "2026-11-10T08:15:00.000Z"
+    },
+    {
+      "id": "3f1c6c1e-0a54-4e0e-9a43-000000000002",
+      "title": "Pothole on service road",
+      "description": "Deep pothole near the north gate, risk for forklifts.",
+      "category": "ROAD_HAZARD",
+      "severity": "MEDIUM",
+      "status": "IN_PROGRESS",
+      "location": { "latitude": 16.8452, "longitude": 96.1801, "address": "North gate service road" },
+      "photos": [],
+      "reportedBy": "u-tech-1",
+      "assignee": "u-op-1",
+      "resolutionNote": null,
+      "resolvedAt": null,
+      "activityLog": [
+        { "at": "2026-11-11T09:00:00.000Z", "actorId": "u-op-1", "status": "IN_PROGRESS" }
+      ],
+      "createdAt": "2026-11-10T14:30:00.000Z",
+      "updatedAt": "2026-11-11T09:00:00.000Z"
+    },
+    {
+      "id": "3f1c6c1e-0a54-4e0e-9a43-000000000003",
+      "title": "Exposed wiring in corridor B",
+      "description": "Ceiling panel fell, wiring is exposed above the corridor.",
+      "category": "SAFETY",
+      "severity": "CRITICAL",
+      "status": "RESOLVED",
+      "location": { "latitude": null, "longitude": null, "address": "Building 2, corridor B" },
+      "photos": [],
+      "reportedBy": "u-tech-2",
+      "assignee": "u-op-2",
+      "resolutionNote": "Panel replaced and wiring insulated.",
+      "resolvedAt": "2026-11-12T16:00:00.000Z",
+      "activityLog": [
+        { "at": "2026-11-12T10:00:00.000Z", "actorId": "u-op-2", "status": "IN_PROGRESS" },
+        { "at": "2026-11-12T16:00:00.000Z", "actorId": "u-op-2", "status": "RESOLVED" }
+      ],
+      "createdAt": "2026-11-12T09:30:00.000Z",
+      "updatedAt": "2026-11-12T16:00:00.000Z"
+    },
+    {
+      "id": "3f1c6c1e-0a54-4e0e-9a43-000000000004",
+      "title": "Broken pallet jack handle",
+      "description": "Handle snapped on pallet jack PJ-12.",
+      "category": "EQUIPMENT",
+      "severity": "LOW",
+      "status": "OPEN",
+      "location": { "latitude": 16.8391, "longitude": 96.1702, "address": null },
+      "photos": [],
+      "reportedBy": "u-tech-2",
+      "assignee": null,
+      "resolutionNote": null,
+      "resolvedAt": null,
+      "activityLog": [],
+      "createdAt": "2026-11-13T07:45:00.000Z",
+      "updatedAt": "2026-11-13T07:45:00.000Z"
+    }
+  ]
+}

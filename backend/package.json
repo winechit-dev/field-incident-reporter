@@ -1,0 +1,17 @@
+{
+  "name": "field-incident-reporter-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local mock API for the Field Incident Reporter (json-server plus a thin rules layer)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "reset": "node src/reset.js",
+    "test": "node --test test/api.test.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "json-server": "0.17.4",
+    "multer": "^1.4.5-lts.1"
+  }
+}
