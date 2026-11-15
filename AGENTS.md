@@ -9,7 +9,7 @@ Technicians report physical incidents from a phone; Operators triage them on a w
 | Admin | `admin/` | Next.js (App Router), TypeScript | `admin-implementer`, `admin-reviewer` |
 | Contract | `backend/openapi.yaml`, `GLOSSARY.md`, `docs/adr/` | OpenAPI 3 | `contract-architect` |
 
-Read your lane's `AGENTS.md` before touching code: `backend/AGENTS.md`, `mobile/AGENTS.md`, `admin/AGENTS.md`.
+Read your lane's `AGENTS.md` before touching code: `backend/AGENTS.md`, `mobile/AGENTS.md`, `admin/AGENTS.md`. Each lists the skills in `.claude/skills/` for its work. Every agent's model, inputs, outputs and handoffs: `docs/agents/agent-matrix.md`.
 
 ## Contract-first
 

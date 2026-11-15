@@ -7,6 +7,14 @@ Mock API: json-server serves reads; `src/app.js` enforces every rule. Commands a
 - `backend-reviewer` reads the diff against the contract and the shared rules, read-only.
 - `contract-architect` owns `openapi.yaml`.
 
+Models, inputs, outputs and handoffs: `docs/agents/agent-matrix.md`.
+
+## Skills
+| Working on | Skill |
+| --- | --- |
+| A route, a rule, an error code, seed data, an API test | `backend-api` (preloaded into both agents) |
+| Reviewing a diff, or self-checking before `REVIEW` | `backend-review` |
+
 ## Boundaries
 - Edit only `backend/`. Ask for contract changes in the handoff.
 - Keep each rule in `src/app.js` next to the endpoint it governs.

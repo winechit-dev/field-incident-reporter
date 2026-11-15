@@ -1,6 +1,6 @@
 ---
 name: android-implementer
-description: Android and iOS implementer for mobile/. Use for Kotlin Multiplatform work: domain, data and sync, screens, platform capabilities. Works from a handoff file and stays inside mobile/.
+description: Android and iOS implementer for mobile/. Use for Kotlin Multiplatform work on domain, data and sync, screens and platform capabilities. Works from a handoff file and stays inside mobile/.
 tools: Read, Grep, Glob, Edit, Write, Bash, Skill
 model: sonnet
 skills:

@@ -1,16 +1,22 @@
 # Admin lane
 
-Next.js dashboard where Operators triage, filter, assign and resolve Incidents. The lane starts empty: the first task scaffolds it.
+Next.js dashboard where Operators triage, filter, assign and resolve Incidents. Layout and behaviour: `README.md`.
 
 ## Roles
 - `admin-implementer` owns `admin/`.
 - `admin-reviewer` reads the diff against the contract and the handoff, read-only.
 
+Models, inputs, outputs and handoffs: `docs/agents/agent-matrix.md`.
+
+## Skills
+| Working on | Skill |
+| --- | --- |
+| A route, a server action, an API call, a filter, a form, a rule, a test | `admin-architecture` (preloaded into both agents) |
+| A component, layout, copy, dark mode, accessibility | `admin-ui` |
+| Reviewing a diff, or self-checking before `REVIEW` | `admin-review` |
+
 ## Stack
 Next.js App Router, TypeScript (`strict`), Tailwind, shadcn/ui, Vitest. The API client's types are generated from `../backend/openapi.yaml` into `src/api/schema.d.ts` with `openapi-typescript`; that file is generated, never hand-edited.
-
-## First task: scaffold
-Create the app so these scripts exist: `dev`, `build`, `typecheck`, `lint`, `test`, `gen:api`. The gates in `docs/agents/quality-gates.md` depend on them.
 
 ## Workflow
 1. Read the handoff; run `npm run gen:api` so types match the contract.

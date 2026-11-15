@@ -1,0 +1,50 @@
+---
+name: admin-ui
+description: Visual and interaction rules for the admin dashboard. Use when adding or changing a component, a table, a form's look, a badge, layout or spacing, dark mode, responsive behaviour, UI copy or accessibility in admin/.
+---
+
+# Admin UI
+
+Tailwind 4 and shadcn/ui primitives in `src/components/ui/`. One look across the dashboard comes from reusing what exists.
+
+## Building blocks
+
+- Reach for a primitive in `src/components/ui/` first (`Button`, `Badge`, `Card`, `Input`, `Select`, `Table`, `Textarea`). Add a missing one with the shadcn CLI so it matches `components.json`.
+- Status and Severity always render through `StatusBadge` and `SeverityBadge`. Their colours and the labels in `src/lib/domain.ts` are the only place an enum becomes something visible; a new enum value is added to both, and the type check enforces it.
+- Timestamps render through `LocalTime`: UTC from the server, the viewer's zone after hydration, with the ISO value in `title`.
+- Combine classes with `cn(...)`.
+
+## Tokens
+
+- Colour comes from the theme tokens in `globals.css`: `text-muted-foreground`, `text-destructive`, `border-input`, `bg-background`. A literal palette colour is allowed only in the badge maps, and always with its `dark:` pair.
+- Spacing follows the existing rhythm: `gap-2` inside a control group, `gap-4` inside a form, `gap-5` between page sections, `px-6 py-6` page padding, content capped at `max-w-7xl`.
+- Type: `text-2xl font-semibold` for the page title, `text-sm` for body and tables, `text-xs font-medium text-muted-foreground` for field labels.
+
+## States
+
+Every view that loads data renders four states: the `<Suspense>` fallback while loading, an empty message that says why it is empty ("No incidents match these filters."), the data, and a failure that says what happened and what to do. A form adds pending (buttons disabled, label changes to "Saving…") and success.
+
+## Accessibility
+
+- Every input has a visible `<label>` that wraps it or points to it.
+- A failed field sets `aria-invalid`; the message is in an element with `role="alert"`. A success message uses `role="status"`.
+- Interactive things are `<button>` or `<a>`; a table row that navigates contains a real link.
+- Focus is always visible (`focus-visible:ring-*`); the tab order follows the reading order.
+- Meaning carried by colour is also carried by text, as the badges do.
+- Text contrast holds in both themes; check dark mode for anything using a literal colour.
+
+## Responsive
+
+Operators work on a desktop, but the dashboard stays usable at tablet width. Controls wrap with `flex flex-wrap`; a wide table scrolls horizontally inside its own container while the page itself does not; the detail page stacks its columns below `lg`.
+
+## Copy
+
+Glossary terms, sentence case, and a verb on every button ("Start work", "Resolve", "Save changes"). An error says what was not done and what to do next. The dashboard shows only what an Operator can act on.
+
+## Proving it
+
+Open the changed page against the running backend with the `claude-in-chrome` skill. Check each state, keyboard-only use of the changed control, dark mode, and a narrow window, and describe what you saw in the handoff.
+
+## Done when
+
+The change reuses the existing primitives and tokens, all states render, and the browser check covered keyboard, dark mode and a narrow window.
