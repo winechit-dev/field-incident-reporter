@@ -138,7 +138,7 @@ The repo includes a workflow for coding agents working on the three parts in par
 | Backend | Complete for the contract. Verified against both clients. |
 | Android app | Report, view, edit, delete, offline sync, camera and gallery, location, WorkManager sync. Run on an emulator. |
 | Dashboard | Sign-in, filterable list, detail page, triage actions. Run in a browser. |
-| iOS app | Shares all screens and logic with Android. Camera and gallery, location, photo compression and sync scheduling are written (UIKit, PhotosUI, CoreLocation, BackgroundTasks). Builds and launches in the simulator, and the compression and retry logic are tested there. **The camera, photo picker, location prompt and background tasks themselves have not been exercised by hand**, and iOS never runs background tasks in the simulator. |
+| iOS app | Shares all screens and logic with Android. Checked in the simulator: sign-in, location (with the permission prompt), gallery photo with compression, reporting, offline retry with backoff, pull-to-refresh, edit, and delete with undo ([`docs/handoffs/004-ios-verification.md`](docs/handoffs/004-ios-verification.md)). **Not verified:** a real camera capture (the simulator's camera takes no photo) and the background tasks (iOS does not run them in the simulator). |
 | Not built | A demo video, automated checks of what the screens show or of real devices (the cross-app logic is covered: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)), filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
 
 Smaller deviations from the original plan: the camera uses the system camera app instead of CameraX, and there is no map pin for adjusting a location.
