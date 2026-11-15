@@ -1,0 +1,112 @@
+import {
+  CATEGORIES,
+  SEVERITIES,
+  STATUSES,
+  type Category,
+  type Severity,
+  type Status,
+} from "./domain";
+
+export const PAGE_SIZE = 20;
+const MAX_PAGE = 10_000;
+const MAX_QUERY_LENGTH = 100;
+
+export const SORT_KEYS = ["createdAt", "updatedAt"] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export type SortOrder = "asc" | "desc";
+
+/** What an Operator has asked to see. Everything is optional except paging and sorting. */
+export interface Filters {
+  status?: Status;
+  severity?: Severity;
+  category?: Category;
+  /** An Operator's user id. */
+  assignee?: string;
+  /** Free-text search. */
+  q?: string;
+  /** First day to include, `YYYY-MM-DD`, UTC. */
+  from?: string;
+  /** Last day to include, `YYYY-MM-DD`, UTC. */
+  to?: string;
+  sort: SortKey;
+  order: SortOrder;
+  page: number;
+}
+
+export const DEFAULT_FILTERS: Filters = { sort: "createdAt", order: "desc", page: 1 };
+
+type RawParams = Record<string, string | string[] | undefined>;
+
+const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+const oneOf = <T extends string>(list: readonly T[], value: string | undefined): T | undefined =>
+  list.find((item) => item === value);
+
+/** A real calendar day, not just something shaped like one (`2026-02-31` is rejected). */
+function validDay(value: string | undefined): string | undefined {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const real = date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  return real ? value : undefined;
+}
+
+/** Read filters from the URL. Anything invalid is ignored, so a hand-edited URL never breaks the page. */
+export function parseFilters(params: RawParams): Filters {
+  const q = first(params.q)?.trim().slice(0, MAX_QUERY_LENGTH);
+  const assignee = first(params.assignee);
+  const page = Number.parseInt(first(params.page) ?? "", 10);
+  return {
+    status: oneOf(STATUSES, first(params.status)),
+    severity: oneOf(SEVERITIES, first(params.severity)),
+    category: oneOf(CATEGORIES, first(params.category)),
+    assignee: assignee && /^[A-Za-z0-9-]{1,64}$/.test(assignee) ? assignee : undefined,
+    q: q || undefined,
+    from: validDay(first(params.from)),
+    to: validDay(first(params.to)),
+    sort: oneOf(SORT_KEYS, first(params.sort)) ?? DEFAULT_FILTERS.sort,
+    order: oneOf(["asc", "desc"] as const, first(params.order)) ?? DEFAULT_FILTERS.order,
+    page: Number.isInteger(page) && page >= 1 ? Math.min(page, MAX_PAGE) : 1,
+  };
+}
+
+/** The query for `GET /incidents`, as the contract defines it. */
+export function toApiQuery(f: Filters) {
+  return {
+    status: f.status,
+    severity: f.severity,
+    category: f.category,
+    assignee: f.assignee,
+    q: f.q,
+    createdAt_gte: f.from ? `${f.from}T00:00:00.000Z` : undefined,
+    createdAt_lte: f.to ? `${f.to}T23:59:59.999Z` : undefined,
+    _sort: f.sort,
+    _order: f.order,
+    _page: f.page,
+    _limit: PAGE_SIZE,
+  };
+}
+
+/** The URL form of the filters. Defaults are left out so shared links stay short. */
+export function toSearchParams(f: Filters): URLSearchParams {
+  const params = new URLSearchParams();
+  const set = (key: string, value: string | undefined) => value && params.set(key, value);
+  set("status", f.status);
+  set("severity", f.severity);
+  set("category", f.category);
+  set("assignee", f.assignee);
+  set("q", f.q);
+  set("from", f.from);
+  set("to", f.to);
+  if (f.sort !== DEFAULT_FILTERS.sort) params.set("sort", f.sort);
+  if (f.order !== DEFAULT_FILTERS.order) params.set("order", f.order);
+  if (f.page > 1) params.set("page", String(f.page));
+  return params;
+}
+
+export function hasActiveFilters(f: Filters): boolean {
+  return Boolean(f.status || f.severity || f.category || f.assignee || f.q || f.from || f.to);
+}
+
+export function pageCount(total: number): number {
+  return Math.max(1, Math.ceil(total / PAGE_SIZE));
+}
