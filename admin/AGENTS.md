@@ -1,0 +1,31 @@
+# Admin lane
+
+Next.js dashboard where Operators triage, filter, assign and resolve Incidents. The lane starts empty: the first task scaffolds it.
+
+## Roles
+- `admin-implementer` owns `admin/`.
+- `admin-reviewer` reads the diff against the contract and the handoff, read-only.
+
+## Stack
+Next.js App Router, TypeScript (`strict`), Tailwind, shadcn/ui, Vitest. The API client's types are generated from `../backend/openapi.yaml` into `src/api/schema.d.ts` with `openapi-typescript`; that file is generated, never hand-edited.
+
+## First task: scaffold
+Create the app so these scripts exist: `dev`, `build`, `typecheck`, `lint`, `test`, `gen:api`. The gates in `docs/agents/quality-gates.md` depend on them.
+
+## Workflow
+1. Read the handoff; run `npm run gen:api` so types match the contract.
+2. Write the failing test: pure logic (filter-to-query building, allowed Status actions, activity-log formatting) in Vitest.
+3. Implement. Keep pure logic in plain functions under `src/lib/`; components stay thin.
+4. Run the admin gates in `docs/agents/quality-gates.md`.
+5. For any UI change, open the page in a browser against the running backend (`claude-in-chrome` skill) and describe what you saw.
+
+## Practices
+- One typed API module (`src/api/`) wraps every call and adds `X-User-Id` from the Operator picker.
+- Branch on the error `code` from the contract.
+- Filters (Status, Severity, Category, assignee, date range, search) live in the URL so a view can be shared.
+- Operators change Status, assignee and Resolution Note only; the UI offers nothing a Technician-owned field would need.
+- Show times in the browser's local zone; the API sends UTC.
+- The backend allows CORS for any origin during development; the dashboard talks to `http://localhost:3000`.
+
+## Done when
+Gates are green, `npm run gen:api` leaves no diff, and the dashboard shows an Incident a Technician reported.
