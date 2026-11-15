@@ -122,7 +122,7 @@ cd backend && npm test                                  # 13 API tests
 cd admin && npm run typecheck && npm run lint && npm test && npm run build   # 27 tests
 cd mobile && ./gradlew :core:domain:allTests :core:data:testAndroidHostTest \
   :core:data:iosSimulatorArm64Test :feature:incidents:testAndroidHostTest :shared:iosSimulatorArm64Test
-scripts/integration/run-conflicts.sh                    # the two sync-conflict scenarios against a real API
+scripts/integration/run-integration.sh                    # the five cross-app scenarios against a real API
 ```
 
 The mobile tests include the sync state machine (offline create, retry after a lost response, conflict handling, photo ordering), run on both the Android host and the iOS simulator.
@@ -139,6 +139,6 @@ The repo includes a workflow for coding agents working on the three parts in par
 | Android app | Report, view, edit, delete, offline sync, camera and gallery, location, WorkManager sync. Run on an emulator. |
 | Dashboard | Sign-in, filterable list, detail page, triage actions. Run in a browser. |
 | iOS app | Shares all screens and logic with Android. Camera and gallery, location, photo compression and sync scheduling are written (UIKit, PhotosUI, CoreLocation, BackgroundTasks). Builds and launches in the simulator, and the compression and retry logic are tested there. **The camera, photo picker, location prompt and background tasks themselves have not been exercised by hand**, and iOS never runs background tasks in the simulator. |
-| Not built | A demo video, automated cross-app tests beyond the two conflict scenarios (the rest of the integration check was run by hand: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)), filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
+| Not built | A demo video, automated checks of what the screens show or of real devices (the cross-app logic is covered: [`docs/handoffs/003-integration-check.md`](docs/handoffs/003-integration-check.md)), filtering for unassigned incidents, and real authentication (the API trusts an `X-User-Id` header). |
 
 Smaller deviations from the original plan: the camera uses the system camera app instead of CameraX, and there is no map pin for adjusting a location.
