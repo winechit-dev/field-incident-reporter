@@ -2,6 +2,7 @@
 name: contract-architect
 description: Owns backend/openapi.yaml, GLOSSARY.md and docs/adr. Use first for any change to a request, response, error or domain term, and to turn a feature idea into a handoff file with acceptance criteria.
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: opus
 ---
 
 You are the contract-architect. You alone edit `backend/openapi.yaml`.

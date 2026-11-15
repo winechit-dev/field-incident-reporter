@@ -19,7 +19,7 @@ The spec parses, each changed operation lists all its status codes with a schema
 ## How lanes consume it
 - Backend implements the delta and proves each status code in `backend/test/`.
 - Admin regenerates types (`npm run gen:api` in `admin/`) and commits the result.
-- Mobile updates DTOs and mappers by hand, so the reviewer checks field-by-field against the spec. Unknown JSON fields are ignored, so an additive change never breaks an old app build.
+- Mobile updates DTOs and mappers by hand, so the reviewer checks field-by-field against the spec. Unknown JSON fields are ignored, so a new field never breaks an old app build. A new enum value does: the mappers use `valueOf`, so the handoff for one must include a mobile task that maps it.
 
 ## Handoff file
 Copy `docs/handoffs/_template.md`. Agents communicate through this file and the repo, not through chat.

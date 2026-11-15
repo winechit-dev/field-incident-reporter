@@ -16,7 +16,9 @@ A gate is **green** or **red**; there is no amber. Paste the final output of eac
 
 ## Mobile (`mobile/`)
 - `./gradlew :core:domain:allTests :core:data:testAndroidHostTest :core:data:iosSimulatorArm64Test` is green.
+- `./gradlew :feature:incidents:testAndroidHostTest :feature:incidents:iosSimulatorArm64Test :shared:iosSimulatorArm64Test` is green.
 - `./gradlew :androidApp:assembleDebug :shared:linkDebugFrameworkIosSimulatorArm64` is green.
+- `./gradlew :androidApp:lintDebug` reports 0 errors and no warning the change introduced (baseline: 7, about dependency versions, an obsolete SDK check and the launcher icon).
 - Sync or domain logic changes come with a test in `commonTest` that failed first.
 - DTOs match the contract field by field.
 - A UI change is run on the emulator, using the `run` skill, and the result is described in the handoff.

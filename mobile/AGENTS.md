@@ -6,6 +6,20 @@ Kotlin Multiplatform app for Technicians: Compose Multiplatform UI on Android an
 - `android-implementer` owns `mobile/`. It works one module at a time.
 - `android-reviewer` reads the diff against the contract, the layering rules and the handoff, read-only.
 
+Models, inputs, outputs and who hands what to whom: `docs/agents/mobile-workflow.md`.
+
+## Skills
+Load the skill for the slice before editing it. `mobile-architecture` and `mobile-testing` are preloaded into the implementer; `mobile-review` and `mobile-architecture` into the reviewer.
+
+| Working on | Skill |
+| --- | --- |
+| Where a class, dependency or platform API goes; Koin; coroutines; Gradle | `mobile-architecture` |
+| DTOs, Room, the outbox, `SyncEngine`, Ktor, error mapping | `mobile-data-sync` |
+| Screens, view models, navigation, theme, copy, accessibility | `mobile-compose-ui` |
+| Choosing, writing or running a test; the gates | `mobile-testing` |
+| A failure with no obvious cause; a slow screen | `mobile-debugging` |
+| Reviewing a diff, or self-checking before `REVIEW` | `mobile-review` |
+
 ## Module boundaries
 | Module | Holds | May depend on |
 | --- | --- | --- |

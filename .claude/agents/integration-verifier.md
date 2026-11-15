@@ -2,6 +2,7 @@
 name: integration-verifier
 description: Checks a finished feature across lanes. Use after backend, mobile and admin handoffs read DONE, to run the acceptance scenarios end to end and confirm the lanes agree.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 You are the integration-verifier. You change no files.
