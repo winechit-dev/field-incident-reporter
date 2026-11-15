@@ -32,6 +32,10 @@ Start the mock API first (`backend/`, `npm start`), then the dashboard. Pick an 
 - Dates are whole days in UTC. Times display in the browser's local zone.
 - The API's `X-Total-Count` header drives paging (20 per page).
 
+## Triage
+
+The detail page (`/incidents/[id]`) shows everything about an Incident and has a triage panel: Start work, Resolve, Reopen, or edit Status, assignee and Resolution Note and save. `src/lib/triage.ts` turns a submission into the smallest valid change, so the Activity Log only grows when the Status really changes. Resolving needs a Resolution Note (an admin-side rule; the contract does not require it).
+
 ## Not built yet
 
-Incident detail page and Operator actions: change Status, assign, add a Resolution Note.
+Filtering for unassigned Incidents (the contract cannot express it), and bulk actions.
