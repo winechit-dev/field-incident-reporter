@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import dev.fieldreporter.core.domain.IncidentRepository
 import dev.fieldreporter.core.domain.UserRepository
 import dev.fieldreporter.feature.incidents.App
+import dev.fieldreporter.platform.AndroidPlatformCapabilities
+import dev.fieldreporter.platform.PhotoCompressor
 import org.koin.core.context.GlobalContext
 
 class MainActivity : ComponentActivity() {
@@ -15,6 +17,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val incidents = GlobalContext.get().get<IncidentRepository>()
         val users = GlobalContext.get().get<UserRepository>()
-        setContent { App(incidents, users) }
+        val capabilities = AndroidPlatformCapabilities(PhotoCompressor(applicationContext))
+        setContent { App(incidents, users, capabilities) }
     }
 }
