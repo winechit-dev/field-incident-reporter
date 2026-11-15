@@ -1,0 +1,18 @@
+# OS and editors
+.DS_Store
+.idea/
+*.iml
+
+# Node
+node_modules/
+.next/
+
+# Backend runtime data (recreated from backend/seed.json)
+backend/db.json
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Local machine config
+local.properties
+.env
+.env.*
