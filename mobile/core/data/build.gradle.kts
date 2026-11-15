@@ -40,6 +40,10 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
+        // The integration tests skip themselves unless a real API is running (see scripts/integration).
+        getByName("androidHostTest").dependencies {
+            implementation(libs.junit)
+        }
     }
 }
 

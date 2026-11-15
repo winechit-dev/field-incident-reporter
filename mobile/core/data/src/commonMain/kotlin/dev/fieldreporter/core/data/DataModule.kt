@@ -39,7 +39,7 @@ fun dataModule(baseUrl: String): Module = module {
     single<UserRepository> { UserRepositoryImpl(get(), get(), get()) }
 }
 
-private fun createHttpClient() = HttpClient {
+internal fun createHttpClient() = HttpClient {
     install(ContentNegotiation) {
         json(Json { ignoreUnknownKeys = true; explicitNulls = false })
     }
