@@ -3,7 +3,6 @@ package dev.fieldreporter.feature.incidents
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.backhandler.BackHandler
@@ -25,12 +24,6 @@ import dev.fieldreporter.feature.incidents.users.UserPickerScreen
 import dev.fieldreporter.feature.incidents.users.UserPickerViewModel
 
 private enum class Session { Loading, SignedOut, SignedIn }
-
-private sealed interface Screen {
-    data object List : Screen
-    data class Detail(val id: String) : Screen
-    data class Form(val editingId: String?) : Screen
-}
 
 /**
  * The whole app. The host (Android activity or iOS view controller) supplies the repositories
@@ -59,34 +52,33 @@ fun App(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun Signed(incidents: IncidentRepository, users: UserRepository, capabilities: PlatformCapabilities) {
-    val stack = remember { mutableStateListOf<Screen>(Screen.List) }
+    val nav = remember { Navigator() }
     val listViewModel = viewModel { IncidentListViewModel(incidents, users) }
-    BackHandler(enabled = stack.size > 1) { stack.removeAt(stack.lastIndex) }
+    BackHandler(enabled = nav.canGoBack) { nav.back() }
 
-    when (val screen = stack.last()) {
+    when (val screen = nav.current) {
         Screen.List -> IncidentListScreen(
             viewModel = listViewModel,
-            onOpen = { stack.add(Screen.Detail(it.id)) },
-            onReport = { stack.add(Screen.Form(editingId = null)) },
+            onOpen = { nav.openDetail(it.id) },
+            onReport = { nav.openForm() },
             onSwitchUser = listViewModel::switchUser,
         )
         is Screen.Detail -> IncidentDetailScreen(
             viewModel = viewModel(key = "detail-${screen.id}") { IncidentDetailViewModel(incidents, screen.id) },
-            onBack = { stack.removeAt(stack.lastIndex) },
-            onEdit = { stack.add(Screen.Form(editingId = it.id)) },
+            onBack = { nav.back() },
+            onEdit = { nav.openForm(editingId = it.id) },
             onDelete = {
                 listViewModel.requestDelete(it)
-                stack.clear()
-                stack.add(Screen.List)
+                nav.backToList()
             },
         )
         is Screen.Form -> IncidentFormScreen(
-            viewModel = viewModel(key = "form-${screen.editingId ?: "new"}") {
+            viewModel = viewModel(key = screen.viewModelKey) {
                 IncidentFormViewModel(incidents, screen.editingId, requirePhoto = capabilities.canCapturePhotos)
             },
             capabilities = capabilities,
             editing = screen.editingId != null,
-            onClose = { stack.removeAt(stack.lastIndex) },
+            onClose = { nav.back() },
         )
     }
 }
