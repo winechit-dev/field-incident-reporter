@@ -68,7 +68,7 @@ fun IncidentDetailScreen(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 is DetailState.Loaded -> {
-                    Content(s.incident, viewModel::dismissFailure, onEdit = { onEdit(s.incident) }, onDelete = { confirmDelete = true })
+                    Content(s.incident, s.assigneeName, viewModel::dismissFailure, onEdit = { onEdit(s.incident) }, onDelete = { confirmDelete = true })
                     if (confirmDelete) {
                         AlertDialog(
                             onDismissRequest = { confirmDelete = false },
@@ -89,7 +89,7 @@ fun IncidentDetailScreen(
 }
 
 @Composable
-private fun Content(incident: Incident, onDismissFailure: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+private fun Content(incident: Incident, assigneeName: String?, onDismissFailure: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -117,7 +117,7 @@ private fun Content(incident: Incident, onDismissFailure: () -> Unit, onEdit: ()
         }
         Section("Reported") { Text(incident.createdAt.display()) }
 
-        if (incident.assignee != null) Section("Handling") { Text("An operator is handling this incident.") }
+        if (incident.assignee != null) Section("Handling") { Text(handlingText(assigneeName)) }
         incident.resolutionNote?.takeIf { it.isNotBlank() }?.let { note -> Section("Resolution") { Text(note) } }
         if (incident.activityLog.isNotEmpty()) {
             Section("Activity") {
@@ -146,6 +146,10 @@ private fun Content(incident: Incident, onDismissFailure: () -> Unit, onEdit: ()
         }
     }
 }
+
+/** The Handling line: the Operator's name when known, today's wording otherwise (also for a blank name). */
+internal fun handlingText(assigneeName: String?): String =
+    if (assigneeName.isNullOrBlank()) "An operator is handling this incident." else "$assigneeName is handling this incident."
 
 @Composable
 private fun Section(title: String, body: @Composable () -> Unit) {

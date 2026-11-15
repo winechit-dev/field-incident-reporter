@@ -64,7 +64,7 @@ private fun Signed(incidents: IncidentRepository, users: UserRepository, capabil
             onSwitchUser = listViewModel::switchUser,
         )
         is Screen.Detail -> IncidentDetailScreen(
-            viewModel = viewModel(key = "detail-${screen.id}") { IncidentDetailViewModel(incidents, screen.id) },
+            viewModel = viewModel(key = "detail-${screen.id}") { IncidentDetailViewModel(incidents, users, screen.id) },
             onBack = { nav.back() },
             onEdit = { nav.openForm(editingId = it.id) },
             onDelete = {

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlin.time.Instant
@@ -68,6 +69,13 @@ internal class RoomLocalStore(private val db: FieldReporterDatabase) : LocalStor
 
     override suspend fun clearCurrentUser() = db.kv().delete(CURRENT_USER)
 
+    override fun observeKnownUsers(): Flow<List<User>> = db.kv().observe(KNOWN_USERS).map { decodeKnownUsers(it?.value) }
+
+    override suspend fun setKnownUsers(users: List<User>) {
+        val stored = users.map { StoredUser(it.id, it.name, it.role.name) }
+        db.kv().set(KvEntity(KNOWN_USERS, OpJson.encodeToString(storedUserList, stored)))
+    }
+
     override suspend fun <T> inTransaction(block: suspend () -> T): T = lock.withLock { block() }
 
     private fun KvEntity.toUser(): User {
@@ -111,5 +119,24 @@ internal class RoomLocalStore(private val db: FieldReporterDatabase) : LocalStor
 
     private companion object {
         const val CURRENT_USER = "current_user"
+        const val KNOWN_USERS = "known_users"
+    }
+}
+
+private val storedUserList = ListSerializer(StoredUser.serializer())
+
+/**
+ * The stored `known_users` value. A missing or undecodable value reads as "no list", so the screen
+ * falls back instead of crashing; a user whose role this build does not know is skipped.
+ */
+internal fun decodeKnownUsers(value: String?): List<User> {
+    if (value == null) return emptyList()
+    return try {
+        // User by user, so one role this build does not know drops that user only.
+        OpJson.decodeFromString(storedUserList, value).mapNotNull { s ->
+            Role.entries.firstOrNull { it.name == s.role }?.let { User(s.id, s.name, it) }
+        }
+    } catch (_: SerializationException) {
+        emptyList()
     }
 }

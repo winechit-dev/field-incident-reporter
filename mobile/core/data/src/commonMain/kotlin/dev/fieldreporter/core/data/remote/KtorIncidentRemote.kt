@@ -5,6 +5,7 @@ import dev.fieldreporter.core.domain.IncidentEdit
 import dev.fieldreporter.core.domain.Photo
 import dev.fieldreporter.core.domain.User
 import io.ktor.client.HttpClient
+import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
@@ -23,6 +24,7 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.ContentConvertException
 import kotlinx.io.IOException
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -40,7 +42,7 @@ internal class KtorIncidentRemote(
 ) : IncidentRemote {
 
     override suspend fun users(): List<User> =
-        send { get { endpoint("/users") } }.body<List<UserDto>>().map { it.toDomain() }
+        decoding { send { get { endpoint("/users") } }.body<List<UserDto>>() }.toDomain()
 
     override suspend fun listMine(userId: String): List<Incident> =
         send { get { endpoint("/incidents?reportedBy=$userId&_sort=createdAt&_order=desc") } }
@@ -121,6 +123,22 @@ internal class KtorIncidentRemote(
             in 400..499 -> RemoteException.Rejected(code, message)
             else -> RemoteException.Network(message)
         }
+    }
+
+    /**
+     * Reads a response body, mapping a body that does not decode (wrong shape, missing field, not
+     * JSON) to [RemoteException.Network], as [send] does for failures during the request. Ktor wraps
+     * decode failures in [ContentConvertException] and reports an unexpected content type with
+     * [NoTransformationFoundException]; neither is a [RemoteException].
+     */
+    private suspend fun <T> decoding(read: suspend () -> T): T = try {
+        read()
+    } catch (e: ContentConvertException) {
+        throw RemoteException.Network("Unreadable response")
+    } catch (e: NoTransformationFoundException) {
+        throw RemoteException.Network("Unreadable response")
+    } catch (e: SerializationException) {
+        throw RemoteException.Network("Unreadable response")
     }
 
     /** Small helper so each call adds `X-User-Id` without repeating it. */

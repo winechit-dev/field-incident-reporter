@@ -58,6 +58,13 @@ interface UserRepository {
     /** Fetch the seeded users from the server. @throws ServerUnavailableException if it can't be reached. */
     suspend fun availableUsers(): List<User>
 
+    /**
+     * The Operator with [id] from the user list the last sync (or picker fetch) stored on this
+     * device, or null when the list was never stored, does not hold [id], or [id] is not an
+     * Operator. Works offline and emits again when the stored list changes.
+     */
+    fun knownOperator(id: String): Flow<User?>
+
     suspend fun select(user: User)
 
     /** Forget the Current User so the picker shows again. Local Incidents stay on the device. */

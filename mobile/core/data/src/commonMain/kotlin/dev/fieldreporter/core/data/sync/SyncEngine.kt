@@ -11,6 +11,7 @@ import dev.fieldreporter.core.domain.SyncFailure
 import dev.fieldreporter.core.domain.SyncFailureReason
 import dev.fieldreporter.core.domain.SyncOutcome
 import dev.fieldreporter.core.domain.SyncState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -32,7 +33,27 @@ internal class SyncEngine(
     suspend fun sync(): SyncOutcome = running.withLock {
         if (!push()) return SyncOutcome.RETRY
         if (!pull()) return SyncOutcome.RETRY
+        refreshKnownUsers()
         SyncOutcome.COMPLETED
+    }
+
+    /**
+     * Best effort: keep a copy of `GET /users` so the detail screen can name the assigned Operator
+     * offline. No failure of the fetch or its decoding changes the sync outcome; the old list stays.
+     * `KtorIncidentRemote.users()` maps HTTP and decode failures to [RemoteException]; catching
+     * [Exception] here is the backstop for anything else the remote throws, with cancellation
+     * rethrown first so a cancelled sync still stops. Only the fetch is guarded: a failure to store
+     * the list is not swallowed.
+     */
+    private suspend fun refreshKnownUsers() {
+        val users = try {
+            remote.users()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return
+        }
+        store.setKnownUsers(users)
     }
 
     /** @return false if the run must stop and be retried later. */

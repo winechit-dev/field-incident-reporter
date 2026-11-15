@@ -117,4 +117,8 @@ internal fun IncidentEdit.toRequest() = UpdateIncidentRequest(
     location = location?.toDto(),
 )
 
-internal fun UserDto.toDomain() = User(id, name, Role.valueOf(role))
+/** Null when [UserDto.role] is a role this build does not know. */
+internal fun UserDto.toDomainOrNull(): User? = Role.entries.firstOrNull { it.name == role }?.let { User(id, name, it) }
+
+/** Maps user by user: a user with an unknown role is skipped, the rest are kept. */
+internal fun List<UserDto>.toDomain(): List<User> = mapNotNull { it.toDomainOrNull() }

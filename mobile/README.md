@@ -19,6 +19,14 @@ then pulls server changes. A network failure leaves the queue intact for a retry
 means an Operator already moved the Incident out of Open: the server version wins and the Incident is
 marked Failed (see `docs/adr/0002-offline-first-sync-server-wins.md`).
 
+After each completed sync the engine also stores `GET /users` as one JSON value in the `kv` table
+(key `known_users`, no schema change). The Incident detail screen reads it to show the assigned
+Operator's name offline; without a stored name (or with a blank one) it keeps the wording "An
+operator is handling this incident." The refresh is best effort: if `GET /users` fails or its body
+does not decode, the old list stays and the sync outcome is unchanged. A user whose role this build
+does not know is skipped, the others are kept. The user picker never reads it and still needs the
+network.
+
 ## Run and test
 
 ```

@@ -29,6 +29,7 @@ internal class FakeLocalStore : LocalStore {
     private val outbox = mutableListOf<QueuedOp>()
     private var nextSeq = 1L
     private val user = MutableStateFlow<User?>(null)
+    private val knownUsers = MutableStateFlow<List<User>>(emptyList())
 
     override fun observeIncidents(userId: String): Flow<List<Incident>> = rows.map { m ->
         m.values.filter { it.reportedBy == userId && it.id !in hidden }.sortedByDescending { it.createdAt }
@@ -53,6 +54,8 @@ internal class FakeLocalStore : LocalStore {
     override suspend fun currentUser() = user.value
     override suspend fun setCurrentUser(user: User) { this.user.value = user }
     override suspend fun clearCurrentUser() { user.value = null }
+    override fun observeKnownUsers(): Flow<List<User>> = knownUsers
+    override suspend fun setKnownUsers(users: List<User>) { knownUsers.value = users }
     override suspend fun <T> inTransaction(block: suspend () -> T): T = block()
 }
 
@@ -62,6 +65,10 @@ internal class FakeRemote : IncidentRemote {
     val server = mutableMapOf<String, Incident>()
     val calls = mutableListOf<String>()
     var rejectCreateWith: String? = null
+
+    /** What `GET /users` returns. Set [usersFailure] to make it fail instead. */
+    var userList: List<User> = listOf(technician)
+    var usersFailure: Exception? = null
     private var counter = 0
 
     private fun gate(call: String) {
@@ -80,7 +87,11 @@ internal class FakeRemote : IncidentRemote {
         server[id] = server.getValue(id).copy(status = status, updatedAt = Instant.fromEpochSeconds(9_000))
     }
 
-    override suspend fun users() = listOf(technician)
+    override suspend fun users(): List<User> {
+        gate("users")
+        usersFailure?.let { throw it }
+        return userList
+    }
     override suspend fun listMine(userId: String): List<Incident> {
         gate("list")
         return server.values.filter { it.reportedBy == userId }

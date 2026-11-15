@@ -40,5 +40,11 @@ internal interface LocalStore {
     suspend fun setCurrentUser(user: User)
     suspend fun clearCurrentUser()
 
+    /** The user list stored by the last sync; empty when none was stored or it cannot be decoded. */
+    fun observeKnownUsers(): Flow<List<User>>
+
+    /** Replace the whole stored user list. */
+    suspend fun setKnownUsers(users: List<User>)
+
     suspend fun <T> inTransaction(block: suspend () -> T): T
 }

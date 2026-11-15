@@ -39,6 +39,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
         // The integration tests skip themselves unless a real API is running (see scripts/integration).
         getByName("androidHostTest").dependencies {

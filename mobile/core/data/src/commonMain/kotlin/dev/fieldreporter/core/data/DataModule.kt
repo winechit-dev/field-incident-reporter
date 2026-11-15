@@ -11,6 +11,7 @@ import dev.fieldreporter.core.data.sync.SyncEngine
 import dev.fieldreporter.core.domain.IncidentRepository
 import dev.fieldreporter.core.domain.UserRepository
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -39,7 +40,10 @@ fun dataModule(baseUrl: String): Module = module {
     single<UserRepository> { UserRepositoryImpl(get(), get(), get()) }
 }
 
-internal fun createHttpClient() = HttpClient {
+internal fun createHttpClient() = HttpClient { fieldReporterConfig() }
+
+/** The client set-up shared by the app and the remote tests (which pass a mock engine). */
+internal fun HttpClientConfig<*>.fieldReporterConfig() {
     install(ContentNegotiation) {
         json(Json { ignoreUnknownKeys = true; explicitNulls = false })
     }

@@ -63,6 +63,11 @@ class FakeUserRepository : UserRepository {
     val user = MutableStateFlow<User?>(technician)
     override val currentUser: Flow<User?> = user
     override suspend fun availableUsers() = listOf(technician)
+    /** Users the device has stored; scripted by tests. */
+    val known = MutableStateFlow<List<User>>(emptyList())
+    override fun knownOperator(id: String): Flow<User?> =
+        known.map { list -> list.firstOrNull { it.id == id && it.role == Role.OPERATOR } }
+
     override suspend fun select(user: User) { this.user.value = user }
     override suspend fun signOut() { user.value = null }
 }
