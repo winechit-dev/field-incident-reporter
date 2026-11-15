@@ -7,4 +7,4 @@ Run the matching reviewer on the handoff in $ARGUMENTS: `backend` → `backend-r
 
 Tell it which diff to review: the lane's branch against `main` (`git diff main...<branch> -- <lane dir>`), or the working tree when the work is uncommitted.
 
-Show its verdict per section, then its blockers and nits. If blockers exist, send them to the lane implementer with `/implement`, then review again. When none remain, have the implementer set the lane status to `DONE`; the reviewer changes no files.
+Show its verdict per section, then its blockers and nits. If blockers exist, send them to the lane implementer with `/implement`, then review again. When none remain, record the review outcome under "Evidence" in the handoff and set the lane status to `DONE` yourself; the reviewer changes no files.

@@ -30,7 +30,7 @@ Every reviewer runs one tier above its lane's implementer, so the check is indep
 | --- | --- | --- | --- |
 | `contract-architect` | a feature idea, or "Contract needs" in a handoff | the handoff with Given/When/Then criteria per lane; the contract delta; glossary and ADR changes | `backend-implementer`; then mobile and admin in parallel |
 | `<lane>-implementer` | the handoff and the merged contract | tests seen red then green, code inside its lane, gate output under "Evidence", a device or browser description for UI changes, lane status `REVIEW` | its lane's reviewer; contract gaps go to `contract-architect` through "Contract needs" |
-| `<lane>-reviewer` | the handoff, the diff, its own gate run | a verdict per review-skill section and per gate; findings as `blocker` or `nit` with `file:line` and the failing scenario | the implementer, who fixes blockers and, once none remain, sets the lane `DONE` (reviewers change no files) |
+| `<lane>-reviewer` | the handoff, the diff, its own gate run | a verdict per review-skill section and per gate; findings as `blocker` or `nit` with `file:line` and the failing scenario | the implementer while blockers remain; once none do, the main session records the outcome in the handoff and sets the lane `DONE` (reviewers change no files) |
 | `integration-verifier` | handoffs reading `DONE` in every lane | one verdict per acceptance criterion | the failing lane's implementer, or the feature is done |
 
 Agents talk through the handoff file. No agent edits another's lane, and no agent reviews its own work. Subagents cannot start other subagents: the main session runs each step through the commands and carries nothing between agents except the handoff file.

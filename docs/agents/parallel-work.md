@@ -18,6 +18,7 @@ Run each parallel agent in its own git worktree (`isolation: worktree`), on a br
 | `docs/handoffs/<id>-*.md` | each agent edits only its own lane's section |
 | `mobile/gradle/libs.versions.toml` | one mobile agent at a time |
 | Room schema (`mobile/core/data/schemas/`) | one mobile agent at a time; a migration is its own task |
+| Root `README.md` | the main session, after the lanes are `DONE`; lane agents report what should change |
 | `backend/seed.json` | `backend-implementer`; mobile and admin ask via handoff |
 
 ## Mobile modules
