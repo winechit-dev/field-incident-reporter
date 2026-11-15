@@ -23,6 +23,7 @@ This is a monorepo with three apps that share one API contract:
 - [Testing and quality](#testing-and-quality)
 - [Development guidelines](#development-guidelines)
 - [Contributing](#contributing)
+- [Agentic development](#agentic-development)
 - [Troubleshooting](#troubleshooting)
 - [Status and known limits](#status-and-known-limits)
 - [More documentation](#more-documentation)
@@ -394,7 +395,99 @@ Every feature follows the same seven steps: **plan → contract → implement �
 - [ ] `scripts/check-forbidden-terms.sh` exits 0. The public repo must contain no reference to the assessing company.
 - [ ] READMEs match the code.
 
-**Working with AI agents.** The repo includes a [Claude Code](https://claude.com/claude-code) workflow that runs these steps with one specialised agent per lane: `/plan-feature`, `/implement`, `/review` and `/verify-integration`. The guide, with the agents, skills, example prompts and its own troubleshooting table, is [`docs/agents/README.md`](docs/agents/README.md).
+**Working with AI agents.** These steps can be run by specialised agents, one per lane. See [Agentic development](#agentic-development).
+
+## Agentic development
+
+The repo is set up to be built with [Claude Code](https://claude.com/claude-code) agents: one specialised agent per lane, one handoff file per feature, and a reviewer on a stronger model than the author. This section is the summary. The full guide, with every workflow and copy-ready prompts, is [`docs/agents/README.md`](docs/agents/README.md).
+
+### How it works
+
+You run each step from the main Claude Code session with one of four commands. Agents never start each other; the handoff file in [`docs/handoffs/`](docs/handoffs) carries the state between them.
+
+| Command | Runs | Result |
+| --- | --- | --- |
+| `/plan-feature <description>` | `contract-architect` | A handoff file with acceptance criteria, and the contract change |
+| `/implement <backend\|mobile\|admin> <handoff file>` | that lane's implementer | Tests and code in the lane, gate output in the handoff |
+| `/review <backend\|mobile\|admin> <handoff file>` | that lane's reviewer | A verdict with `blocker` and `nit` findings |
+| `/verify-integration <handoff file>` | `integration-verifier` | A verdict per acceptance criterion across the lanes |
+
+### Agents and models
+
+| Agent | Responsibility | Writes | Model |
+| --- | --- | --- | --- |
+| `contract-architect` | Plans a feature and changes the contract | `backend/openapi.yaml`, `GLOSSARY.md`, `docs/adr/`, handoff files | `opus` |
+| `backend-implementer` | Endpoints, rules, seed data, API tests | `backend/` | `haiku` |
+| `backend-reviewer` | Reviews a backend diff | nothing | `sonnet` |
+| `android-implementer` | The Kotlin Multiplatform app, Android and iOS | `mobile/` | `sonnet` |
+| `android-reviewer` | Reviews a mobile diff | nothing | `opus` |
+| `admin-implementer` | The Next.js dashboard | `admin/` | `sonnet` |
+| `admin-reviewer` | Reviews an admin diff | nothing | `opus` |
+| `integration-verifier` | Checks a finished feature across the lanes | nothing | `sonnet` |
+
+The model names are Claude Code aliases set in each file under [`.claude/agents/`](.claude/agents). Implementers run on the cheaper model because they produce most of the tokens; each reviewer runs one tier higher so the check does not share the author's blind spots. To use a stronger model for one task, say so in the prompt (`Run /implement mobile on <handoff> with model opus`); `/implement` already does this for sync-engine, Room-schema and authorization changes. Reasons, overrides and cost guidelines: [Models](docs/agents/README.md#models).
+
+### Skills
+
+Eleven skills in [`.claude/skills/`](.claude/skills) hold the project knowledge for one kind of work. Some are preloaded into an agent; the rest load on demand, or when you type the name (`/mobile-debugging`).
+
+| Lane | Skills |
+| --- | --- |
+| Backend | `backend-api`, `backend-review` |
+| Mobile | `mobile-architecture`, `mobile-testing`, `mobile-data-sync`, `mobile-compose-ui`, `mobile-debugging`, `mobile-review` |
+| Admin | `admin-architecture`, `admin-ui`, `admin-review` |
+
+What each covers and which agent loads it: [Skills](docs/agents/README.md#skills).
+
+### Which workflow to use
+
+| The task | Do this | Guide |
+| --- | --- | --- |
+| A new feature | `/plan-feature`, then `/implement` per lane (backend first), `/review` per lane, `/verify-integration` | [Feature development](docs/agents/README.md#feature-development) |
+| A bug | Investigate read-only, reproduce with a failing test, then fix in the main session (small) or through a handoff and `/implement` (larger) | [Bug fixing](docs/agents/README.md#bug-fixing) |
+| A change that touches the API | Always `/plan-feature` first, so the contract changes before any lane | [Cross-platform work](docs/agents/README.md#cross-platform-work) |
+| Mobile and admin work on one feature | Run both `/implement` commands in parallel, each in its own worktree, after backend is merged | [Cross-platform work](docs/agents/README.md#cross-platform-work) |
+| Checking finished work | `/review <lane> <handoff>`, never the agent that wrote it | [Review and quality assurance](docs/agents/README.md#review-and-quality-assurance) |
+| A question, a typo, a one-line fix | Ask or fix in the main session; an agent is not worth its start-up cost | [Agent or main session](docs/agents/README.md#agent-or-main-session) |
+
+### Example prompts
+
+```
+/plan-feature Operators can mark an Incident as urgent, and Technicians see an Urgent label in the app
+```
+
+```
+/implement backend docs/handoffs/010-incident-priority.md
+```
+
+```
+Run /implement mobile and /implement admin on docs/handoffs/010-incident-priority.md in parallel,
+each in its own git worktree.
+```
+
+```
+/review mobile docs/handoffs/010-incident-priority.md
+```
+
+```
+/mobile-debugging An Incident stays on "Waiting to sync" after the emulator comes back online.
+Find the cause and show me the reproduction before fixing anything.
+```
+
+```
+Without changing any files, explain how the dashboard decides which fields "Start work" sends,
+and where that is tested.
+```
+
+`010-incident-priority.md` is an example name; yours is whatever `/plan-feature` creates.
+
+### Ground rules
+
+- An agent writes only in its own lane. A need in another lane goes into the handoff, never into an edit.
+- Only `contract-architect` edits `backend/openapi.yaml`.
+- Review in a fresh context, whichever model wrote the code.
+- Raise the model for hard tasks, not for all tasks.
+- After changing anything under `.claude/`, `AGENTS.md` or `docs/agents/`, run `scripts/check-agents.sh`.
 
 ## Troubleshooting
 
@@ -450,5 +543,7 @@ Not built:
 | Shared standards | [`docs/agents/standards.md`](docs/agents/standards.md) |
 | Contract changes | [`docs/agents/contract-change.md`](docs/agents/contract-change.md) |
 | Parallel work, branches and merge order | [`docs/agents/parallel-work.md`](docs/agents/parallel-work.md) |
-| AI agent workflow | [`docs/agents/README.md`](docs/agents/README.md), [`AGENTS.md`](AGENTS.md) |
+| Agentic development guide: workflows, agents, skills, models | [`docs/agents/README.md`](docs/agents/README.md) |
+| Agent matrix: inputs, outputs and model reasons per agent | [`docs/agents/agent-matrix.md`](docs/agents/agent-matrix.md) |
+| Project rules for agents | [`AGENTS.md`](AGENTS.md) |
 | Feature history, with criteria and evidence | [`docs/handoffs/`](docs/handoffs) |
