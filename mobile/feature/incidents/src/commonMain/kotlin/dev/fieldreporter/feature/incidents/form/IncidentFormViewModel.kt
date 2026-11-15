@@ -33,6 +33,7 @@ data class FormState(
     val titleError: String? = null,
     val descriptionError: String? = null,
     val photoError: String? = null,
+    val locationError: String? = null,
     val saving: Boolean = false,
     /** Set when the Incident cannot be edited any more (an Operator picked it up). */
     val blockedMessage: String? = null,
@@ -95,8 +96,13 @@ class IncidentFormViewModel(
 
     /** @param found null when the lookup failed, which leaves the location as it was. */
     fun onLocationFound(found: Location?) {
-        if (found == null) return
-        _state.update { it.copy(location = found.copy(address = found.address ?: it.location.address)) }
+        if (found == null) {
+            _state.update { it.copy(locationError = "Couldn't find your location. Type an address instead.") }
+            return
+        }
+        _state.update {
+            it.copy(location = found.copy(address = found.address ?: it.location.address), locationError = null)
+        }
     }
 
     fun onPhotoAdded(path: String) {

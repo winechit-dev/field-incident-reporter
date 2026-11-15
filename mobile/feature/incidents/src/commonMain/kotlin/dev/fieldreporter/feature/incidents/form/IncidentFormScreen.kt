@@ -100,6 +100,7 @@ fun IncidentFormScreen(
                 )
             }
             lookupLocation?.let { OutlinedButton(onClick = it) { Text("Use my location") } }
+            state.locationError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 
             Text("Photos (${state.photos.size}/$MAX_PHOTOS)", style = MaterialTheme.typography.labelLarge)
             if (state.photos.isNotEmpty()) {

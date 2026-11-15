@@ -89,4 +89,17 @@ class IncidentFormViewModelTest {
         advanceUntilIdle()
         assertTrue(repo.edits.isEmpty())
     }
+
+    @Test
+    fun locationLookupKeepsAddressAndReportsAFailure() = runTest {
+        val vm = vm(FakeIncidentRepository())
+        vm.onAddress("North gate")
+        vm.onLocationFound(dev.fieldreporter.core.domain.Location(latitude = 16.8, longitude = 96.1))
+        assertEquals("North gate", vm.state.value.location.address)
+        assertEquals(16.8, vm.state.value.location.latitude)
+
+        vm.onLocationFound(null)
+        assertNotNull(vm.state.value.locationError)
+        assertEquals(16.8, vm.state.value.location.latitude, "a failed lookup keeps the earlier fix")
+    }
 }
