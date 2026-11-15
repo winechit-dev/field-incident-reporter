@@ -5,7 +5,8 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
-// Umbrella module: it only exists to build the single iOS framework ("Shared") that Xcode links.
+// Builds the single iOS framework ("Shared") that Xcode links, and holds the platform code that
+// belongs to the iOS app: photo capture, location, and sync scheduling.
 kotlin {
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
@@ -26,6 +27,10 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.compose.runtime)
             implementation(libs.compose.ui)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
