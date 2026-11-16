@@ -37,9 +37,9 @@ This is a monorepo with three apps that share one API contract:
 
 ### Watch: the product in two minutes
 
-[![Watch the feature video: No signal. No problem.](docs/videos/feature-video-cover.png)](docs/videos/feature-video.mp4)
+[![Watch the feature video: No signal. No problem.](docs/videos/feature-video-cover.png)](https://winechit-dev.github.io/field-incident-reporter/feature-video.html)
 
-*[Feature video](docs/videos/feature-video.mp4) (2 min, with subtitles): one Incident from an offline report on the phone, through sync, to triage and resolution on the dashboard, and back to the Technician.*
+*[Feature video](https://winechit-dev.github.io/field-incident-reporter/feature-video.html) (2 min, with subtitles): one Incident from an offline report on the phone, through sync, to triage and resolution on the dashboard, and back to the Technician.*
 
 The app and dashboard footage is recorded from the real apps against the local API. The opening shots and the Incident photo are AI-generated illustrations, not a real site. Still screenshots of every screen, including dark mode: [`docs/screenshots/`](docs/screenshots).
 
@@ -393,9 +393,9 @@ The repo is set up to be built with [Claude Code](https://claude.com/claude-code
 
 ### Watch: the agent workflow explained
 
-[![Watch the explainer: Eight agents. One handoff file.](docs/videos/agent-workflow-explainer-cover.png)](docs/videos/agent-workflow-explainer.mp4)
+[![Watch the explainer: Eight agents. One handoff file.](docs/videos/agent-workflow-explainer-cover.png)](https://winechit-dev.github.io/field-incident-reporter/agent-workflow-explainer.html)
 
-*[Agent workflow explainer](docs/videos/agent-workflow-explainer.mp4) (4 min 41 s, with subtitles): the agents, the commands, the lifecycle, which model runs each agent, which skills each one loads, and a real feature run from [`005-unassigned-filter.md`](docs/handoffs/005-unassigned-filter.md).*
+*[Agent workflow explainer](https://winechit-dev.github.io/field-incident-reporter/agent-workflow-explainer.html) (4 min 41 s, with subtitles): the agents, the commands, the lifecycle, which model runs each agent, which skills each one loads, and a real feature run from [`005-unassigned-filter.md`](docs/handoffs/005-unassigned-filter.md).*
 
 ### How it works
 
