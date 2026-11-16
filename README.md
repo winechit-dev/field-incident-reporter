@@ -10,15 +10,17 @@ This is a monorepo with three apps that share one API contract:
 | Mock API | [`backend/`](backend) | both clients | Node, port 3000 |
 | Operator dashboard | [`admin/`](admin) | Operators | Browser, port 3001 |
 
+**Start here:** [Run it locally](#getting-started) · [Feature video, 2 min](https://winechit-dev.github.io/field-incident-reporter/feature-video.html) · [API contract](backend/openapi.yaml) · [Agent workflow guide](docs/agents/README.md) · [Agent workflow video, 5 min](https://winechit-dev.github.io/field-incident-reporter/agent-workflow-explainer.html)
+
 ## Contents
 
 - [What it does](#what-it-does)
-- [Architecture](#architecture)
-- [Technology stack](#technology-stack)
-- [Project structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
 - [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Project structure](#project-structure)
 - [API and platform integration](#api-and-platform-integration)
 - [Testing and quality](#testing-and-quality)
 - [Development guidelines](#development-guidelines)
@@ -42,6 +44,156 @@ This is a monorepo with three apps that share one API contract:
 *[Feature video](https://winechit-dev.github.io/field-incident-reporter/feature-video.html) (2 min, with subtitles): one Incident from an offline report on the phone, through sync, to triage and resolution on the dashboard, and back to the Technician.*
 
 The app and dashboard footage is recorded from the real apps against the local API. The opening shots and the Incident photo are AI-generated illustrations, not a real site. Still screenshots of every screen, including dark mode: [`docs/screenshots/`](docs/screenshots).
+
+## Prerequisites
+
+| Tool | Version | Needed for |
+| --- | --- | --- |
+| Node.js | 22.12 or later, 24, or 26 (developed with 26) | Backend and dashboard |
+| JDK | 21 (developed with 21) | Mobile build |
+| Android Studio with the Android SDK | SDK platform 37; the app runs on Android 7.0 (API 24) and later | Android app |
+| Android emulator or device | | Running the Android app |
+| Xcode | Developed with 26.2, on an Apple silicon Mac | iOS app (optional) |
+| `curl`, `bash` | | The integration script |
+| Python 3, Ruby | | Optional: `scripts/check-agents.sh` and the contract parse check |
+
+**Only want the API and the dashboard?** Node.js is all you need. Everything else in this table is for the mobile app or for optional checks.
+
+Check what you have with `node --version` and `java -version`.
+
+## Getting started
+
+There are three apps. Start them in the order below, each in its own terminal window, and leave each one running.
+
+| Step | What you start | You need | Time |
+| --- | --- | --- | --- |
+| 1 | The API | Node.js | 1 minute |
+| 2 | The dashboard | Node.js | 1 minute |
+| 3 | The Android app | JDK 21, Android Studio, an emulator | 5 to 10 minutes on the first build |
+| 4 | The iOS app (optional) | Xcode on an Apple silicon Mac | a few minutes on the first build |
+
+Steps 1 and 2 are enough to see the dashboard working. If something does not match what a step says you should see, go to [Troubleshooting](#troubleshooting).
+
+### Before you start: get the code
+
+```bash
+git clone https://github.com/winechit-dev/field-incident-reporter.git
+cd field-incident-reporter
+```
+
+Every command below starts from this `field-incident-reporter` folder.
+
+### Step 1: Start the API
+
+In terminal 1:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+**You should see** this line, and the terminal stays busy:
+
+```
+Field Incident Reporter API on http://localhost:3000
+```
+
+**Check it.** In another terminal, run:
+
+```bash
+curl http://localhost:3000/users
+```
+
+It prints four users: two Technicians and two Operators.
+
+<details>
+<summary>Where the data lives, and how to reset it</summary>
+
+The data is in `backend/db.json`, created from `seed.json` the first time the API starts. To go back to the seed data and clear uploaded photos: stop the API with Ctrl+C, run `npm run reset`, then run `npm start` again.
+
+</details>
+
+### Step 2: Start the dashboard
+
+In terminal 2:
+
+```bash
+cd admin
+npm install
+npm run dev
+```
+
+**You should see** a line with `http://localhost:3001`.
+
+**Check it.** Open <http://localhost:3001> in a browser. Choose an Operator on the sign-in page: Mya Sandar or Htet Naing. There is no password. The Incident list appears.
+
+No `.env` file is needed. To change a port or the API address, see [Configuration](#configuration).
+
+### Step 3: Start the Android app
+
+1. Start an Android emulator from Android Studio (Device Manager, then the play button).
+2. Install the app. Either open the `mobile/` folder in Android Studio and run `androidApp`, or in terminal 3:
+
+   ```bash
+   cd mobile
+   ./gradlew :androidApp:installDebug
+   ```
+
+3. On the emulator, open the app named **Field Reporter**.
+4. Choose a Technician: Aung Kyaw or Thiri Win.
+
+**You should see** that Technician's Incident list.
+
+Two things to know:
+
+- The emulator reaches the API on your computer at `http://10.0.2.2:3000`. This works only on an emulator. For a real phone, see [Troubleshooting](#troubleshooting).
+- If Gradle says `SDK location not found`, set `ANDROID_HOME`, or open `mobile/` in Android Studio once so it writes `mobile/local.properties`.
+
+### Step 4: Start the iOS app (optional)
+
+1. Open `mobile/iosApp/iosApp.xcodeproj` in Xcode.
+2. Pick an iPhone simulator.
+3. Press Run.
+
+Xcode builds the shared Kotlin code through Gradle, so the first build takes a few minutes. The simulator reaches the API at `http://localhost:3000`. What has been checked on iOS is listed in [Status and known limits](#status-and-known-limits).
+
+### Step 5: Try it end to end
+
+With the API, the dashboard and the app all running:
+
+1. **In the app,** tap **Report incident**. Add a title, a photo and your location, then submit. The Incident appears in the app's list.
+2. **In the dashboard,** reload the page. The Incident is in the list. Open it and choose **Start work**.
+3. **In the app,** pull down on the list to refresh. The Incident now shows *In progress*.
+4. **Try it offline.** Turn on airplane mode in the emulator and report another Incident. It shows *Waiting to sync*. Turn airplane mode off, and the label clears by itself.
+
+To see these steps before you run them, watch the [feature video](https://winechit-dev.github.io/field-incident-reporter/feature-video.html).
+
+### Stopping and production builds
+
+Stop any app with Ctrl+C in its terminal.
+
+```bash
+cd admin && npm run build && npm start        # production dashboard on port 3001
+cd mobile && ./gradlew :androidApp:assembleDebug   # APK in androidApp/build/outputs/apk/debug/
+```
+
+The backend is a mock for local development and has no build step.
+
+## Configuration
+
+Everything works with the defaults. All settings are optional.
+
+| Setting | Where | Default | Purpose |
+| --- | --- | --- | --- |
+| `PORT` | backend, environment variable | `3000` | API port |
+| `DB_FILE` | backend, environment variable | `backend/db.json` | Data file |
+| `API_BASE_URL` | admin, `admin/.env.local` (copy [`.env.example`](admin/.env.example)) | `http://localhost:3000` | Where the dashboard's server finds the API |
+| `INTEGRATION_PORT` | `scripts/integration/run-integration.sh` | `3100` | Port of the throwaway API the script starts |
+| Android API URL | `BASE_URL` in [`FieldReporterApp.kt`](mobile/androidApp/src/main/kotlin/dev/fieldreporter/FieldReporterApp.kt) | `http://10.0.2.2:3000` | Constant in code |
+| iOS API URL | `BASE_URL` in [`IosApp.kt`](mobile/shared/src/iosMain/kotlin/dev/fieldreporter/IosApp.kt) | `http://localhost:3000` | Constant in code |
+
+The mobile API URLs are constants, not build settings. If you move the API to another port, change them too.
 
 ## Architecture
 
@@ -89,13 +241,16 @@ Exact versions: [`mobile/gradle/libs.versions.toml`](mobile/gradle/libs.versions
 
 ## Project structure
 
+<details>
+<summary>Directory tree</summary>
+
 ```
 field-incident-reporter/
 ├── backend/                  Mock API
 │   ├── openapi.yaml          The API contract (source of truth)
 │   ├── src/app.js            Every endpoint and rule
 │   ├── src/server.js         Entry point; reset.js restores the seed data
-│   ├── seed.json             Demo data: four users, one Incident per Status
+│   ├── seed.json             Demo data: four users, four Incidents across every Status
 │   ├── test/api.test.js      API tests
 │   └── uploads/              Uploaded photos (git-ignored)
 ├── admin/                    Operator dashboard (Next.js)
@@ -129,6 +284,8 @@ field-incident-reporter/
 └── GLOSSARY.md               Domain terms
 ```
 
+</details>
+
 Mobile module dependencies point inward:
 
 | Module | Holds | May depend on |
@@ -140,97 +297,6 @@ Mobile module dependencies point inward:
 | `:androidApp`, `iosApp` | entry points, platform implementations, DI start-up | all |
 
 Each app has its own README with more detail: [`backend/README.md`](backend/README.md), [`admin/README.md`](admin/README.md), [`mobile/README.md`](mobile/README.md).
-
-## Prerequisites
-
-| Tool | Version | Needed for |
-| --- | --- | --- |
-| Node.js | 22.12 or later, 24, or 26 (developed with 26) | Backend and dashboard |
-| JDK | 21 (developed with 21) | Mobile build |
-| Android Studio with the Android SDK | SDK platform 37; the app runs on Android 7.0 (API 24) and later | Android app |
-| Android emulator or device | | Running the Android app |
-| Xcode | Developed with 26.2, on an Apple silicon Mac | iOS app (optional) |
-| `curl`, `bash` | | The integration script |
-| Python 3, Ruby | | Optional: `scripts/check-agents.sh` and the contract parse check |
-
-You can run the backend and dashboard with Node alone. The mobile toolchain is only needed for the app.
-
-## Getting started
-
-```bash
-git clone https://github.com/winechit-dev/field-incident-reporter.git
-cd field-incident-reporter
-```
-
-Start the three apps in this order, each in its own terminal.
-
-### 1. The API (port 3000)
-
-```bash
-cd backend
-npm install
-npm start
-```
-
-Check it: `curl http://localhost:3000/users` lists the four seeded users. The data lives in `backend/db.json`, created from `seed.json` on first start. To go back to the seed data and clear uploaded photos, stop the server, run `npm run reset`, and start it again.
-
-### 2. The dashboard (port 3001)
-
-```bash
-cd admin
-npm install
-npm run dev
-```
-
-Open <http://localhost:3001> and choose an Operator on the sign-in page (Mya Sandar or Htet Naing). There is no password. No `.env` file is needed for the default setup; see [Configuration](#configuration).
-
-### 3. The Android app
-
-Start an emulator first, then either open `mobile/` in Android Studio and run `androidApp`, or:
-
-```bash
-cd mobile
-./gradlew :androidApp:installDebug
-```
-
-Open **Field Reporter** on the emulator and choose a Technician (Aung Kyaw or Thiri Win). The emulator reaches the API on your machine at `http://10.0.2.2:3000`.
-
-The command line needs to know where the Android SDK is: set `ANDROID_HOME`, or let Android Studio create `mobile/local.properties` by opening the project once.
-
-### 4. The iOS app (optional)
-
-Open `mobile/iosApp/iosApp.xcodeproj` in Xcode, pick an iPhone simulator and run. Xcode builds the shared Kotlin framework through Gradle, so the first build takes a few minutes. The simulator reaches the API at `http://localhost:3000`. See [Status and known limits](#status-and-known-limits) for what has been verified on iOS.
-
-### A short tour
-
-1. In the app, report an Incident with a photo and your location.
-2. Open the dashboard: it appears in the list. Open it, then choose **Start work**.
-3. In the app, pull to refresh: the Incident now shows *In progress*.
-4. Turn the emulator's network off, report another Incident, and watch it show *Waiting to sync*. Turn the network back on and it syncs by itself.
-
-### Production builds
-
-```bash
-cd admin && npm run build && npm start        # production dashboard on port 3001
-cd mobile && ./gradlew :androidApp:assembleDebug   # APK in androidApp/build/outputs/apk/debug/
-```
-
-The backend is a mock for local development and has no build step.
-
-## Configuration
-
-Everything works with the defaults. All settings are optional.
-
-| Setting | Where | Default | Purpose |
-| --- | --- | --- | --- |
-| `PORT` | backend, environment variable | `3000` | API port |
-| `DB_FILE` | backend, environment variable | `backend/db.json` | Data file |
-| `API_BASE_URL` | admin, `admin/.env.local` (copy [`.env.example`](admin/.env.example)) | `http://localhost:3000` | Where the dashboard's server finds the API |
-| `INTEGRATION_PORT` | `scripts/integration/run-integration.sh` | `3100` | Port of the throwaway API the script starts |
-| Android API URL | `BASE_URL` in [`FieldReporterApp.kt`](mobile/androidApp/src/main/kotlin/dev/fieldreporter/FieldReporterApp.kt) | `http://10.0.2.2:3000` | Constant in code |
-| iOS API URL | `BASE_URL` in [`IosApp.kt`](mobile/shared/src/iosMain/kotlin/dev/fieldreporter/IosApp.kt) | `http://localhost:3000` | Constant in code |
-
-The mobile API URLs are constants, not build settings. If you move the API to another port, change them too.
 
 ## API and platform integration
 
@@ -448,21 +514,24 @@ What each covers and which agent loads it: [Skills](docs/agents/README.md#skills
 
 ### Example prompts
 
+<details>
+<summary>Six copy-ready prompts</summary>
+
 ```
 /plan-feature Operators can mark an Incident as urgent, and Technicians see an Urgent label in the app
 ```
 
 ```
-/implement backend docs/handoffs/010-incident-priority.md
+/implement backend docs/handoffs/012-incident-priority.md
 ```
 
 ```
-Run /implement mobile and /implement admin on docs/handoffs/010-incident-priority.md in parallel,
+Run /implement mobile and /implement admin on docs/handoffs/012-incident-priority.md in parallel,
 each in its own git worktree.
 ```
 
 ```
-/review mobile docs/handoffs/010-incident-priority.md
+/review mobile docs/handoffs/012-incident-priority.md
 ```
 
 ```
@@ -475,7 +544,9 @@ Without changing any files, explain how the dashboard decides which fields "Star
 and where that is tested.
 ```
 
-`010-incident-priority.md` is an example name; yours is whatever `/plan-feature` creates.
+`012-incident-priority.md` is an example name; yours is whatever `/plan-feature` creates.
+
+</details>
 
 ### Ground rules
 
