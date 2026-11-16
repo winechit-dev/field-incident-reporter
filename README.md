@@ -57,18 +57,35 @@ The app and dashboard footage is recorded from the real apps against the local A
 | `curl`, `bash` | | The integration script |
 | Python 3, Ruby | | Optional: `scripts/check-agents.sh` and the contract parse check |
 
-You can run the backend and dashboard with Node alone. The mobile toolchain is only needed for the app.
+**Only want the API and the dashboard?** Node.js is all you need. Everything else in this table is for the mobile app or for optional checks.
+
+Check what you have with `node --version` and `java -version`.
 
 ## Getting started
+
+There are three apps. Start them in the order below, each in its own terminal window, and leave each one running.
+
+| Step | What you start | You need | Time |
+| --- | --- | --- | --- |
+| 1 | The API | Node.js | 1 minute |
+| 2 | The dashboard | Node.js | 1 minute |
+| 3 | The Android app | JDK 21, Android Studio, an emulator | 5 to 10 minutes on the first build |
+| 4 | The iOS app (optional) | Xcode on an Apple silicon Mac | a few minutes on the first build |
+
+Steps 1 and 2 are enough to see the dashboard working. If something does not match what a step says you should see, go to [Troubleshooting](#troubleshooting).
+
+### Before you start: get the code
 
 ```bash
 git clone https://github.com/winechit-dev/field-incident-reporter.git
 cd field-incident-reporter
 ```
 
-Start the three apps in this order, each in its own terminal.
+Every command below starts from this `field-incident-reporter` folder.
 
-### 1. The API (port 3000)
+### Step 1: Start the API
+
+In terminal 1:
 
 ```bash
 cd backend
@@ -76,9 +93,30 @@ npm install
 npm start
 ```
 
-Check it: `curl http://localhost:3000/users` lists the four seeded users. The data lives in `backend/db.json`, created from `seed.json` on first start. To go back to the seed data and clear uploaded photos, stop the server, run `npm run reset`, and start it again.
+**You should see** this line, and the terminal stays busy:
 
-### 2. The dashboard (port 3001)
+```
+Field Incident Reporter API on http://localhost:3000
+```
+
+**Check it.** In another terminal, run:
+
+```bash
+curl http://localhost:3000/users
+```
+
+It prints four users: two Technicians and two Operators.
+
+<details>
+<summary>Where the data lives, and how to reset it</summary>
+
+The data is in `backend/db.json`, created from `seed.json` the first time the API starts. To go back to the seed data and clear uploaded photos: stop the API with Ctrl+C, run `npm run reset`, then run `npm start` again.
+
+</details>
+
+### Step 2: Start the dashboard
+
+In terminal 2:
 
 ```bash
 cd admin
@@ -86,33 +124,54 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3001> and choose an Operator on the sign-in page (Mya Sandar or Htet Naing). There is no password. No `.env` file is needed for the default setup; see [Configuration](#configuration).
+**You should see** a line with `http://localhost:3001`.
 
-### 3. The Android app
+**Check it.** Open <http://localhost:3001> in a browser. Choose an Operator on the sign-in page: Mya Sandar or Htet Naing. There is no password. The Incident list appears.
 
-Start an emulator first, then either open `mobile/` in Android Studio and run `androidApp`, or:
+No `.env` file is needed. To change a port or the API address, see [Configuration](#configuration).
 
-```bash
-cd mobile
-./gradlew :androidApp:installDebug
-```
+### Step 3: Start the Android app
 
-Open **Field Reporter** on the emulator and choose a Technician (Aung Kyaw or Thiri Win). The emulator reaches the API on your machine at `http://10.0.2.2:3000`.
+1. Start an Android emulator from Android Studio (Device Manager, then the play button).
+2. Install the app. Either open the `mobile/` folder in Android Studio and run `androidApp`, or in terminal 3:
 
-The command line needs to know where the Android SDK is: set `ANDROID_HOME`, or let Android Studio create `mobile/local.properties` by opening the project once.
+   ```bash
+   cd mobile
+   ./gradlew :androidApp:installDebug
+   ```
 
-### 4. The iOS app (optional)
+3. On the emulator, open the app named **Field Reporter**.
+4. Choose a Technician: Aung Kyaw or Thiri Win.
 
-Open `mobile/iosApp/iosApp.xcodeproj` in Xcode, pick an iPhone simulator and run. Xcode builds the shared Kotlin framework through Gradle, so the first build takes a few minutes. The simulator reaches the API at `http://localhost:3000`. See [Status and known limits](#status-and-known-limits) for what has been verified on iOS.
+**You should see** that Technician's Incident list.
 
-### A short tour
+Two things to know:
 
-1. In the app, report an Incident with a photo and your location.
-2. Open the dashboard: it appears in the list. Open it, then choose **Start work**.
-3. In the app, pull to refresh: the Incident now shows *In progress*.
-4. Turn the emulator's network off, report another Incident, and watch it show *Waiting to sync*. Turn the network back on and it syncs by itself.
+- The emulator reaches the API on your computer at `http://10.0.2.2:3000`. This works only on an emulator. For a real phone, see [Troubleshooting](#troubleshooting).
+- If Gradle says `SDK location not found`, set `ANDROID_HOME`, or open `mobile/` in Android Studio once so it writes `mobile/local.properties`.
 
-### Production builds
+### Step 4: Start the iOS app (optional)
+
+1. Open `mobile/iosApp/iosApp.xcodeproj` in Xcode.
+2. Pick an iPhone simulator.
+3. Press Run.
+
+Xcode builds the shared Kotlin code through Gradle, so the first build takes a few minutes. The simulator reaches the API at `http://localhost:3000`. What has been checked on iOS is listed in [Status and known limits](#status-and-known-limits).
+
+### Step 5: Try it end to end
+
+With the API, the dashboard and the app all running:
+
+1. **In the app,** tap **Report incident**. Add a title, a photo and your location, then submit. The Incident appears in the app's list.
+2. **In the dashboard,** reload the page. The Incident is in the list. Open it and choose **Start work**.
+3. **In the app,** pull down on the list to refresh. The Incident now shows *In progress*.
+4. **Try it offline.** Turn on airplane mode in the emulator and report another Incident. It shows *Waiting to sync*. Turn airplane mode off, and the label clears by itself.
+
+To see these steps before you run them, watch the [feature video](https://winechit-dev.github.io/field-incident-reporter/feature-video.html).
+
+### Stopping and production builds
+
+Stop any app with Ctrl+C in its terminal.
 
 ```bash
 cd admin && npm run build && npm start        # production dashboard on port 3001
