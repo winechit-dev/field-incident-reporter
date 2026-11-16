@@ -35,23 +35,13 @@ This is a monorepo with three apps that share one API contract:
 - **Work offline:** every change is saved on the device first and synced later, with retry and backoff.
 - **Triage:** Operators filter and search Incidents (including the unassigned ones), open one, assign it, move it through *Open → In progress → Resolved*, and record how it was resolved.
 
-<table>
-  <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/android-list.png" width="170" alt="Incident list on the phone"><br><sub>The Technician's list</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-report.png" width="170" alt="Report form with category, severity, GPS location and a photo"><br><sub>Reporting, with GPS and a photo</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-detail.png" width="170" alt="Incident detail with a photo"><br><sub>Detail</sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-offline.png" width="170" alt="List with an incident marked Waiting to sync"><br><sub>Edited offline: <em>Waiting to sync</em></sub></td>
-    <td align="center" valign="top"><img src="docs/screenshots/android-refreshed.png" width="170" alt="List after the operator started work"><br><sub>Back online: the Operator's <em>In progress</em></sub></td>
-  </tr>
-</table>
+### Watch: the product in two minutes
 
-![Dashboard incident list](docs/screenshots/admin-list.png)
-*The Operator dashboard. Filters live in the URL.*
+[![Watch the feature video: No signal. No problem.](docs/videos/feature-video-cover.png)](docs/videos/feature-video.mp4)
 
-![Dashboard incident detail with triage actions](docs/screenshots/admin-detail.png)
-*Triage from the detail page: Status, assignee, Resolution Note, photos and the Activity Log.*
+*[Feature video](docs/videos/feature-video.mp4) (2 min, with subtitles): one Incident from an offline report on the phone, through sync, to triage and resolution on the dashboard, and back to the Technician.*
 
-The photos in these screenshots are a drawn placeholder, not a real site photo. More screens, including dark mode: [`docs/screenshots/`](docs/screenshots).
+The app and dashboard footage is recorded from the real apps against the local API. The opening shots and the Incident photo are AI-generated illustrations, not a real site. Still screenshots of every screen, including dark mode: [`docs/screenshots/`](docs/screenshots).
 
 ## Architecture
 
@@ -400,6 +390,12 @@ Every feature follows the same seven steps: **plan → contract → implement �
 ## Agentic development
 
 The repo is set up to be built with [Claude Code](https://claude.com/claude-code) agents: one specialised agent per lane, one handoff file per feature, and a reviewer on a stronger model than the author. This section is the summary. The full guide, with every workflow and copy-ready prompts, is [`docs/agents/README.md`](docs/agents/README.md).
+
+### Watch: the agent workflow explained
+
+[![Watch the explainer: Eight agents. One handoff file.](docs/videos/agent-workflow-explainer-cover.png)](docs/videos/agent-workflow-explainer.mp4)
+
+*[Agent workflow explainer](docs/videos/agent-workflow-explainer.mp4) (4 min 41 s, with subtitles): the agents, the commands, the lifecycle, which model runs each agent, which skills each one loads, and a real feature run from [`005-unassigned-filter.md`](docs/handoffs/005-unassigned-filter.md).*
 
 ### How it works
 
