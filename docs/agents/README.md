@@ -4,6 +4,7 @@ The repo carries a workflow for building it with [Claude Code](https://claude.co
 
 You do not need the agents to work on this project. The same lifecycle, gates and lane rules apply to a person; see [Contributing](../../README.md#contributing) in the root README.
 
+- [Start here](#start-here)
 - [How it fits together](#how-it-fits-together)
 - [Where things are](#where-things-are)
 - [Agents](#agents)
@@ -17,6 +18,35 @@ You do not need the agents to work on this project. The same lifecycle, gates an
 - [Models](#models)
 - [Best practices](#best-practices)
 - [Troubleshooting](#troubleshooting)
+
+## Start here
+
+New to the workflow? Watch the [5-minute explainer](https://winechit-dev.github.io/field-incident-reporter/agent-workflow-explainer.html), then build your first feature with five steps. Run each one in the main Claude Code session, from the repo root, and wait for it to finish before the next.
+
+| Step | Type this | Then check |
+| --- | --- | --- |
+| 1 | `/plan-feature <what you want, in one sentence>` | A new file appears in `docs/handoffs/`. Read its acceptance criteria before going on. |
+| 2 | `/implement backend <handoff file>` | The backend lane in the handoff reads `REVIEW`. |
+| 3 | `/implement mobile <handoff file>` and `/implement admin <handoff file>` | Each lane reads `REVIEW`. Skip a lane the handoff says has no work. |
+| 4 | `/review <lane> <handoff file>`, once per lane | No blockers. If there are, run `/implement` for that lane again, then `/review` again. |
+| 5 | `/verify-integration <handoff file>` | Every acceptance criterion passes. |
+
+Three rules cover most mistakes:
+
+- **A change to a request, response or error always starts at step 1.**
+- **A question or a one-line fix needs no agent.** Ask or fix in the main session. See [Agent or main session](#agent-or-main-session).
+- **Never ask the agent that wrote the code to check it.** Use `/review`.
+
+The rest of this guide explains each part. The other files in this folder are short references:
+
+| File | Read it when |
+| --- | --- |
+| [`lifecycle.md`](lifecycle.md) | You want the seven steps and when each one counts as done |
+| [`quality-gates.md`](quality-gates.md) | You need the exact commands that must pass in a lane |
+| [`contract-change.md`](contract-change.md) | A request, response or error has to change |
+| [`parallel-work.md`](parallel-work.md) | Two lanes run at once, or two agents might touch one file |
+| [`standards.md`](standards.md) | You need the API conventions and domain rules all lanes share |
+| [`agent-matrix.md`](agent-matrix.md) | You want to know why an agent has its model and skills, or you are changing one |
 
 ## How it fits together
 
