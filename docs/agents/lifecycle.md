@@ -5,7 +5,7 @@ One task = one feature slice for one lane. Each step ends on a completion criter
 Lane status in the handoff: the implementer sets `REVIEW` when its own steps (3, 4, 6 and 7) are complete. After a review with zero blockers, the main session sets `DONE`. Reviewers change no files.
 
 ## 1. Plan
-Owner: `contract-architect` (cross-lane) or the lane implementer (single-lane).
+Owner: `contract-architect`, through `/plan-feature`. For a task in one lane that changes no request, response, error or domain term, the main session may write the handoff itself. Implementers never plan: they start from a handoff that already exists.
 Write the task into `docs/handoffs/<id>-<slug>.md` from `_template.md`: goal, affected lanes, acceptance criteria as Given/When/Then.
 **Done when** every acceptance criterion names the observable result and the lane that proves it.
 
