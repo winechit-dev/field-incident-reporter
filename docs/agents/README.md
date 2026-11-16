@@ -124,13 +124,13 @@ A subagent starts with an empty context: it reads the handoff, the lane rules an
 To give an agent a narrower job than a whole handoff, name it in the prompt:
 
 ```
-Use the android-implementer agent on docs/handoffs/010-incident-priority.md, criterion 3 only:
+Use the android-implementer agent on docs/handoffs/012-incident-priority.md, criterion 3 only:
 the Urgent label on the list screen. Load the mobile-compose-ui skill first.
 ```
 
 ## Workflows
 
-Open the repo in Claude Code. `010-incident-priority.md` is an example file name; yours is whatever `/plan-feature` creates. The features and bugs in the example prompts are made up.
+Open the repo in Claude Code. `012-incident-priority.md` is an example file name; yours is whatever `/plan-feature` creates. The features and bugs in the example prompts are made up.
 
 ### Feature development
 
@@ -145,7 +145,7 @@ Open the repo in Claude Code. `010-incident-priority.md` is an example file name
 **2. Ask for analysis before any code** (optional)
 
 ```
-Read docs/handoffs/010-incident-priority.md and the mobile-data-sync skill. Explain what has to
+Read docs/handoffs/012-incident-priority.md and the mobile-data-sync skill. Explain what has to
 change in mobile/core/data for this, and what could go wrong with Incidents already queued
 offline. Do not edit any files.
 ```
@@ -153,9 +153,9 @@ offline. Do not edit any files.
 **3. Implement, backend first**
 
 ```
-/implement backend docs/handoffs/010-incident-priority.md
-/implement mobile docs/handoffs/010-incident-priority.md
-/implement admin docs/handoffs/010-incident-priority.md
+/implement backend docs/handoffs/012-incident-priority.md
+/implement mobile docs/handoffs/012-incident-priority.md
+/implement admin docs/handoffs/012-incident-priority.md
 ```
 
 The implementer writes a failing test per criterion, makes it pass, runs the lane's gates, pastes the output under "Evidence" in the handoff, and sets its lane to `REVIEW`.
@@ -163,7 +163,7 @@ The implementer writes a failing test per criterion, makes it pass, runs the lan
 **4. Review each lane**
 
 ```
-/review backend docs/handoffs/010-incident-priority.md
+/review backend docs/handoffs/012-incident-priority.md
 ```
 
 Blockers go back through `/implement`, then review again. When none remain, the main session records the outcome in the handoff and sets the lane to `DONE`.
@@ -171,7 +171,7 @@ Blockers go back through `/implement`, then review again. When none remain, the 
 **5. Verify across the lanes and finish**
 
 ```
-/verify-integration docs/handoffs/010-incident-priority.md
+/verify-integration docs/handoffs/012-incident-priority.md
 ```
 
 `integration-verifier` runs each criterion across the lanes, including [`scripts/integration/run-integration.sh`](../../scripts/integration/run-integration.sh), and gives a verdict per criterion. The feature is done when every lane reads `DONE` in the handoff, every criterion passes, and each lane's README matches its code. The main session then updates the root `README.md` if the feature changed anything it describes.
@@ -214,7 +214,7 @@ show me the cause. Do not fix it yet.
 | The cause is in another lane than the symptom | Fix it in the lane that owns the cause. Never patch around it in the lane that shows it. |
 
 ```
-Write docs/handoffs/010-null-assignee.md from the template: backend lane only, one criterion for
+Write docs/handoffs/012-null-assignee.md from the template: backend lane only, one criterion for
 the 422 on a null assignee described above. Then run /implement backend on it.
 ```
 
@@ -237,14 +237,14 @@ Run the lane's gates, then `/review <lane> <handoff>` for anything beyond a triv
 **Dependencies between lanes.** A lane that needs something from another writes it in the handoff under "Contract needs" or "Open questions" and continues with what it can. You then run the agent that owns it:
 
 ```
-The admin lane recorded a contract need in docs/handoffs/010-incident-priority.md. Use the
+The admin lane recorded a contract need in docs/handoffs/012-incident-priority.md. Use the
 contract-architect agent to resolve it, then tell me which lanes have new work.
 ```
 
 **Running lanes in parallel.** Once the backend lane is merged:
 
 ```
-Run /implement mobile and /implement admin on docs/handoffs/010-incident-priority.md in parallel,
+Run /implement mobile and /implement admin on docs/handoffs/012-incident-priority.md in parallel,
 each in its own git worktree.
 ```
 
@@ -257,7 +257,7 @@ Each parallel agent works on a branch named `<id>-<lane>`. Two mobile agents may
 **Request an independent review.** Always through `/review`, which starts the lane's reviewer in a fresh context with read-only tools:
 
 ```
-/review mobile docs/handoffs/010-incident-priority.md
+/review mobile docs/handoffs/012-incident-priority.md
 ```
 
 The reviewer re-runs the gates itself instead of trusting the pasted evidence, and reports a verdict per section of its review skill. Each finding is a `blocker` or a `nit`, with file, line and the failing scenario.
@@ -265,7 +265,7 @@ The reviewer re-runs the gates itself instead of trusting the pasted evidence, a
 **Handle the feedback.**
 
 ```
-/implement mobile docs/handoffs/010-incident-priority.md
+/implement mobile docs/handoffs/012-incident-priority.md
 Fix only the blockers from the review above. Leave the nits unless they are one-line changes.
 ```
 
@@ -327,7 +327,7 @@ The agent files in [`.claude/agents/`](../../.claude/agents) are the source of t
 | A different model for the main session | `/model <alias>` in the session, or `claude --model <alias>` at startup. This does not change the agents: each sets its own model. |
 
 ```
-Run /implement mobile on docs/handoffs/010-incident-priority.md with model opus.
+Run /implement mobile on docs/handoffs/012-incident-priority.md with model opus.
 ```
 
 A per-run model takes an alias (`haiku`, `sonnet`, `opus`), not a full model ID. The `CLAUDE_CODE_SUBAGENT_MODEL` environment variable has no effect here, because every agent sets its own model and that takes precedence.

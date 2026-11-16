@@ -10,15 +10,17 @@ This is a monorepo with three apps that share one API contract:
 | Mock API | [`backend/`](backend) | both clients | Node, port 3000 |
 | Operator dashboard | [`admin/`](admin) | Operators | Browser, port 3001 |
 
+**Start here:** [Run it locally](#getting-started) · [Feature video, 2 min](https://winechit-dev.github.io/field-incident-reporter/feature-video.html) · [API contract](backend/openapi.yaml) · [Agent workflow guide](docs/agents/README.md) · [Agent workflow video, 5 min](https://winechit-dev.github.io/field-incident-reporter/agent-workflow-explainer.html)
+
 ## Contents
 
 - [What it does](#what-it-does)
-- [Architecture](#architecture)
-- [Technology stack](#technology-stack)
-- [Project structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
 - [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Project structure](#project-structure)
 - [API and platform integration](#api-and-platform-integration)
 - [Testing and quality](#testing-and-quality)
 - [Development guidelines](#development-guidelines)
@@ -42,104 +44,6 @@ This is a monorepo with three apps that share one API contract:
 *[Feature video](https://winechit-dev.github.io/field-incident-reporter/feature-video.html) (2 min, with subtitles): one Incident from an offline report on the phone, through sync, to triage and resolution on the dashboard, and back to the Technician.*
 
 The app and dashboard footage is recorded from the real apps against the local API. The opening shots and the Incident photo are AI-generated illustrations, not a real site. Still screenshots of every screen, including dark mode: [`docs/screenshots/`](docs/screenshots).
-
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph Phone["Technician's phone"]
-        UI[Compose UI] --> Repo[Repository]
-        Repo <--> DB[(Room: incidents and outbox)]
-        Repo --> Sync[Sync engine]
-    end
-    Sync -- "REST, X-User-Id" --> API[Mock API]
-    Dash[Operator dashboard] -- "REST, X-User-Id" --> API
-    API --- Spec[[OpenAPI contract]]
-    Dash -. "types generated from" .-> Spec
-```
-
-Three decisions shape the code:
-
-1. **Contract first.** [`backend/openapi.yaml`](backend/openapi.yaml) is the source of truth for every request, response and error. The dashboard's API types are generated from it, the mobile DTOs follow it by hand, and the backend has a test for each documented status code.
-2. **Offline-first, and the server wins a Conflict.** On the phone, Room is the source of truth. Every change is saved locally and queued in an outbox, which a sync engine pushes in order. Creating an Incident is idempotent by a client-generated UUID, so a retry never duplicates. If an Operator has already picked up an Incident when a Technician's offline edit arrives, the server answers `409`, the edit is discarded, and the Incident shows the server's version marked *Sync failed*. Reasoning: [ADR 0002](docs/adr/0002-offline-first-sync-server-wins.md).
-3. **One shared UI on two platforms.** Android and iOS share the screens, view models, data and sync code through Kotlin Multiplatform and Compose Multiplatform. Camera, location, photo compression and background sync sit behind small interfaces with native implementations. Reasoning: [ADR 0001](docs/adr/0001-shared-compose-multiplatform-ui.md).
-
-## Technology stack
-
-| Area | Technology | Used for |
-| --- | --- | --- |
-| Mobile | Kotlin 2.4, Kotlin Multiplatform | One codebase for Android and iOS |
-| | Compose Multiplatform, Material 3 | Shared screens |
-| | Room (bundled SQLite) | Local database: Incidents and the outbox |
-| | Ktor client | HTTP (OkHttp on Android, Darwin on iOS) |
-| | Koin | Dependency injection |
-| | WorkManager, Play Services Location (Android) | Background sync, GPS |
-| | Coil | Loading photos |
-| | Gradle 9.5 (wrapper), AGP 9.1 | Build |
-| Backend | Node, Express, json-server 0.17 | Mock API: json-server serves reads, an Express layer enforces the rules |
-| | multer | Photo uploads |
-| | `node:test` | API tests |
-| Admin | Next.js 16 (App Router), React 19, TypeScript | Dashboard |
-| | Tailwind CSS 4, shadcn/ui | Styling and components |
-| | `openapi-typescript`, `openapi-fetch` | API types and client generated from the contract |
-| | Vitest, ESLint | Tests and linting |
-| Contract | OpenAPI 3.0 | The API definition all three apps follow |
-
-Exact versions: [`mobile/gradle/libs.versions.toml`](mobile/gradle/libs.versions.toml), [`backend/package.json`](backend/package.json), [`admin/package.json`](admin/package.json).
-
-## Project structure
-
-```
-field-incident-reporter/
-├── backend/                  Mock API
-│   ├── openapi.yaml          The API contract (source of truth)
-│   ├── src/app.js            Every endpoint and rule
-│   ├── src/server.js         Entry point; reset.js restores the seed data
-│   ├── seed.json             Demo data: four users, one Incident per Status
-│   ├── test/api.test.js      API tests
-│   └── uploads/              Uploaded photos (git-ignored)
-├── admin/                    Operator dashboard (Next.js)
-│   └── src/
-│       ├── api/              Typed API client; schema.d.ts is generated
-│       ├── app/              Routes: /sign-in, /incidents, /incidents/[id]
-│       ├── components/       App components; ui/ holds shadcn/ui primitives
-│       ├── lib/              Pure logic (filters, triage, overview) and its tests
-│       ├── integration/      Tests that run against a real API (*.itest.ts)
-│       └── proxy.ts          Redirects to sign-in when no Operator is chosen
-├── mobile/                   Kotlin Multiplatform app
-│   ├── core/domain/          Models, rules, repository interfaces (pure Kotlin)
-│   ├── core/data/            Room, Ktor client, sync engine, repositories
-│   ├── feature/incidents/    Shared Compose screens and view models
-│   ├── shared/               Builds the iOS framework; iOS platform code
-│   ├── androidApp/           Android entry point and platform code
-│   ├── iosApp/               Xcode project that hosts the shared framework
-│   └── gradle/libs.versions.toml   All dependency versions
-├── docs/
-│   ├── adr/                  Architecture decision records
-│   ├── agents/               Development process: lifecycle, gates, standards
-│   ├── design/               Design system shared by the app and the dashboard
-│   ├── handoffs/             One file per feature: criteria, status, evidence
-│   └── screenshots/
-├── scripts/
-│   ├── integration/run-integration.sh   Cross-app scenarios against a real API
-│   ├── check-forbidden-terms.sh         Required before every handoff
-│   └── check-agents.sh                  Checks the AI-agent workflow files
-├── .claude/                  AI agent definitions, skills and commands
-├── AGENTS.md                 Project rules for AI agents (CLAUDE.md points here)
-└── GLOSSARY.md               Domain terms
-```
-
-Mobile module dependencies point inward:
-
-| Module | Holds | May depend on |
-| --- | --- | --- |
-| `:core:domain` | models, rules, repository and scheduler interfaces | coroutines only |
-| `:core:data` | Room, Ktor, `SyncEngine`, repositories, DTOs | `:core:domain` |
-| `:feature:incidents` | screens, view models, `PlatformCapabilities` | `:core:domain` |
-| `:shared` | the iOS framework and iOS platform code | all of the above |
-| `:androidApp`, `iosApp` | entry points, platform implementations, DI start-up | all |
-
-Each app has its own README with more detail: [`backend/README.md`](backend/README.md), [`admin/README.md`](admin/README.md), [`mobile/README.md`](mobile/README.md).
 
 ## Prerequisites
 
@@ -231,6 +135,109 @@ Everything works with the defaults. All settings are optional.
 | iOS API URL | `BASE_URL` in [`IosApp.kt`](mobile/shared/src/iosMain/kotlin/dev/fieldreporter/IosApp.kt) | `http://localhost:3000` | Constant in code |
 
 The mobile API URLs are constants, not build settings. If you move the API to another port, change them too.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Phone["Technician's phone"]
+        UI[Compose UI] --> Repo[Repository]
+        Repo <--> DB[(Room: incidents and outbox)]
+        Repo --> Sync[Sync engine]
+    end
+    Sync -- "REST, X-User-Id" --> API[Mock API]
+    Dash[Operator dashboard] -- "REST, X-User-Id" --> API
+    API --- Spec[[OpenAPI contract]]
+    Dash -. "types generated from" .-> Spec
+```
+
+Three decisions shape the code:
+
+1. **Contract first.** [`backend/openapi.yaml`](backend/openapi.yaml) is the source of truth for every request, response and error. The dashboard's API types are generated from it, the mobile DTOs follow it by hand, and the backend has a test for each documented status code.
+2. **Offline-first, and the server wins a Conflict.** On the phone, Room is the source of truth. Every change is saved locally and queued in an outbox, which a sync engine pushes in order. Creating an Incident is idempotent by a client-generated UUID, so a retry never duplicates. If an Operator has already picked up an Incident when a Technician's offline edit arrives, the server answers `409`, the edit is discarded, and the Incident shows the server's version marked *Sync failed*. Reasoning: [ADR 0002](docs/adr/0002-offline-first-sync-server-wins.md).
+3. **One shared UI on two platforms.** Android and iOS share the screens, view models, data and sync code through Kotlin Multiplatform and Compose Multiplatform. Camera, location, photo compression and background sync sit behind small interfaces with native implementations. Reasoning: [ADR 0001](docs/adr/0001-shared-compose-multiplatform-ui.md).
+
+## Technology stack
+
+| Area | Technology | Used for |
+| --- | --- | --- |
+| Mobile | Kotlin 2.4, Kotlin Multiplatform | One codebase for Android and iOS |
+| | Compose Multiplatform, Material 3 | Shared screens |
+| | Room (bundled SQLite) | Local database: Incidents and the outbox |
+| | Ktor client | HTTP (OkHttp on Android, Darwin on iOS) |
+| | Koin | Dependency injection |
+| | WorkManager, Play Services Location (Android) | Background sync, GPS |
+| | Coil | Loading photos |
+| | Gradle 9.5 (wrapper), AGP 9.1 | Build |
+| Backend | Node, Express, json-server 0.17 | Mock API: json-server serves reads, an Express layer enforces the rules |
+| | multer | Photo uploads |
+| | `node:test` | API tests |
+| Admin | Next.js 16 (App Router), React 19, TypeScript | Dashboard |
+| | Tailwind CSS 4, shadcn/ui | Styling and components |
+| | `openapi-typescript`, `openapi-fetch` | API types and client generated from the contract |
+| | Vitest, ESLint | Tests and linting |
+| Contract | OpenAPI 3.0 | The API definition all three apps follow |
+
+Exact versions: [`mobile/gradle/libs.versions.toml`](mobile/gradle/libs.versions.toml), [`backend/package.json`](backend/package.json), [`admin/package.json`](admin/package.json).
+
+## Project structure
+
+<details>
+<summary>Directory tree</summary>
+
+```
+field-incident-reporter/
+├── backend/                  Mock API
+│   ├── openapi.yaml          The API contract (source of truth)
+│   ├── src/app.js            Every endpoint and rule
+│   ├── src/server.js         Entry point; reset.js restores the seed data
+│   ├── seed.json             Demo data: four users, four Incidents across every Status
+│   ├── test/api.test.js      API tests
+│   └── uploads/              Uploaded photos (git-ignored)
+├── admin/                    Operator dashboard (Next.js)
+│   └── src/
+│       ├── api/              Typed API client; schema.d.ts is generated
+│       ├── app/              Routes: /sign-in, /incidents, /incidents/[id]
+│       ├── components/       App components; ui/ holds shadcn/ui primitives
+│       ├── lib/              Pure logic (filters, triage, overview) and its tests
+│       ├── integration/      Tests that run against a real API (*.itest.ts)
+│       └── proxy.ts          Redirects to sign-in when no Operator is chosen
+├── mobile/                   Kotlin Multiplatform app
+│   ├── core/domain/          Models, rules, repository interfaces (pure Kotlin)
+│   ├── core/data/            Room, Ktor client, sync engine, repositories
+│   ├── feature/incidents/    Shared Compose screens and view models
+│   ├── shared/               Builds the iOS framework; iOS platform code
+│   ├── androidApp/           Android entry point and platform code
+│   ├── iosApp/               Xcode project that hosts the shared framework
+│   └── gradle/libs.versions.toml   All dependency versions
+├── docs/
+│   ├── adr/                  Architecture decision records
+│   ├── agents/               Development process: lifecycle, gates, standards
+│   ├── design/               Design system shared by the app and the dashboard
+│   ├── handoffs/             One file per feature: criteria, status, evidence
+│   └── screenshots/
+├── scripts/
+│   ├── integration/run-integration.sh   Cross-app scenarios against a real API
+│   ├── check-forbidden-terms.sh         Required before every handoff
+│   └── check-agents.sh                  Checks the AI-agent workflow files
+├── .claude/                  AI agent definitions, skills and commands
+├── AGENTS.md                 Project rules for AI agents (CLAUDE.md points here)
+└── GLOSSARY.md               Domain terms
+```
+
+</details>
+
+Mobile module dependencies point inward:
+
+| Module | Holds | May depend on |
+| --- | --- | --- |
+| `:core:domain` | models, rules, repository and scheduler interfaces | coroutines only |
+| `:core:data` | Room, Ktor, `SyncEngine`, repositories, DTOs | `:core:domain` |
+| `:feature:incidents` | screens, view models, `PlatformCapabilities` | `:core:domain` |
+| `:shared` | the iOS framework and iOS platform code | all of the above |
+| `:androidApp`, `iosApp` | entry points, platform implementations, DI start-up | all |
+
+Each app has its own README with more detail: [`backend/README.md`](backend/README.md), [`admin/README.md`](admin/README.md), [`mobile/README.md`](mobile/README.md).
 
 ## API and platform integration
 
@@ -448,21 +455,24 @@ What each covers and which agent loads it: [Skills](docs/agents/README.md#skills
 
 ### Example prompts
 
+<details>
+<summary>Six copy-ready prompts</summary>
+
 ```
 /plan-feature Operators can mark an Incident as urgent, and Technicians see an Urgent label in the app
 ```
 
 ```
-/implement backend docs/handoffs/010-incident-priority.md
+/implement backend docs/handoffs/012-incident-priority.md
 ```
 
 ```
-Run /implement mobile and /implement admin on docs/handoffs/010-incident-priority.md in parallel,
+Run /implement mobile and /implement admin on docs/handoffs/012-incident-priority.md in parallel,
 each in its own git worktree.
 ```
 
 ```
-/review mobile docs/handoffs/010-incident-priority.md
+/review mobile docs/handoffs/012-incident-priority.md
 ```
 
 ```
@@ -475,7 +485,9 @@ Without changing any files, explain how the dashboard decides which fields "Star
 and where that is tested.
 ```
 
-`010-incident-priority.md` is an example name; yours is whatever `/plan-feature` creates.
+`012-incident-priority.md` is an example name; yours is whatever `/plan-feature` creates.
+
+</details>
 
 ### Ground rules
 
