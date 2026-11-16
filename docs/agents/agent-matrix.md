@@ -23,6 +23,7 @@ Every reviewer runs one tier above its lane's implementer, so the check is indep
 | --- | --- | --- |
 | backend | `sonnet` | changes who may do what, changes file handling, or was handed back under "Open questions" |
 | mobile | `opus` | changes `SyncEngine`, the outbox format or the Room schema, or was handed back under "Open questions" |
+| any | the next tier up | was handed back by the implementer under "Open questions" |
 
 ## Inputs, outputs, handoffs
 
@@ -42,8 +43,8 @@ Agents talk through the handoff file. No agent edits another's lane, and no agen
 | 1 Plan, 2 Contract | `contract-architect` | | | | the spec parses; every criterion names its lane; error codes are named; a new enum value has a mobile task |
 | 3 Implement | implementer | `backend-api` | `mobile-testing`, then `mobile-data-sync` or `mobile-compose-ui` | `admin-architecture`, `admin-ui` | each criterion has a test seen red, then green |
 | 4 Verify | implementer | `backend-api` | `mobile-testing`; `mobile-debugging` if a gate stays red | `admin-architecture` | every lane gate is green and pasted into the handoff |
-| 5 Review | reviewer | `backend-review` | `mobile-review` | `admin-review` | every section and gate has a verdict; zero blockers |
-| 6 Document, 7 Handoff | implementer | | | | the lane README matches the code; lane status `DONE` |
+| 5 Review | reviewer | `backend-review` | `mobile-review` | `admin-review` | every section and gate has a verdict; zero blockers; the main session then sets the lane `DONE` |
+| 6 Document, 7 Handoff | implementer | | | | the lane README matches the code; lane status `REVIEW` |
 | Integration | `integration-verifier` | | | | `scripts/integration/run-integration.sh` passes and every criterion has a verdict |
 
 ## Across lanes
